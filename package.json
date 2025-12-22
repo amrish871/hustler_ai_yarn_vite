@@ -1,0 +1,25 @@
+{
+  "name": "hustlerWeb",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "yarn workspace web-app dev",
+    "dev:admin": "yarn workspace admin-app dev",
+    "build": "yarn workspaces run build",
+    "lint": "yarn workspaces run lint"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "turbo": "latest",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.5",
+    "lucide-react": "^0.548.0",
+    "react-router-dom": "^7.9.4",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}

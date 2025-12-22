@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@myorg/ui": [
+        "packages/ui/src"
+      ],
+      "@myorg/utils": [
+        "packages/utils/src"
+      ],
+      "@myorg/api": [
+        "packages/api/src"
+      ],
+      "@myorg/auth": [
+        "packages/auth/src"
+      ]
+    }
+  },
+  "include": [
+    "apps/**/*",
+    "packages/**/*"
+  ]
+}
