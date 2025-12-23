@@ -1607,7 +1607,7 @@ export default function HomeScreen() {
                   className="w-full px-4 py-3 bg-white/10 text-white placeholder-white/50 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                   autoComplete="off"
                 />
-                {/* Suggestions Dropdown */}
+                {/* Suggestions Dropdown (single store) */}
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-blue-950/95 backdrop-blur-md rounded-2xl shadow-lg z-[9999] max-h-64 overflow-y-auto p-2">
                     <div className="space-y-2">
@@ -1656,6 +1656,42 @@ export default function HomeScreen() {
                           </button>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+                {/* Suggestions Dropdown (multi-store) */}
+                {showSuggestions && storeProductSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-blue-950/95 backdrop-blur-md rounded-2xl shadow-lg z-[9999] max-h-64 overflow-y-auto p-2">
+                    <div className="space-y-2">
+                      {storeProductSuggestions.map(({store, product}, idx) => (
+                        <button
+                          key={store.id + '-' + product.id + '-' + idx}
+                          onClick={() => {
+                            setSelectedStore(store);
+                            setInputText(product.name);
+                            setShowSuggestions(false);
+                            setStoreProductSuggestions([]);
+                            setShowCatalog(true);
+                          }}
+                          className="w-full bg-white/10 rounded-xl p-3 flex items-center gap-3 hover:bg-white/15 transition-colors text-left"
+                        >
+                          <div className="text-4xl flex-shrink-0">{product.image}</div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white font-semibold text-sm mb-1 truncate">{product.name}</h4>
+                            {product.brand && (
+                              <p className="text-gray-400 text-xs mb-1">{product.brand}</p>
+                            )}
+                            {product.quantity && (
+                              <p className="text-gray-300 text-xs mb-1">{product.quantity}</p>
+                            )}
+                            <p className="text-blue-200 text-xs">{product.category}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0 min-w-[80px]">
+                            <p className="text-green-300 font-bold text-sm mb-1">${product.price}</p>
+                            <p className="text-blue-300 text-xs font-semibold">{store.name}</p>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
