@@ -1356,7 +1356,7 @@ export default function HomeScreen() {
 
   function AddressModal() {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
         <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white">Select Delivery Address</h2>
@@ -2446,25 +2446,27 @@ export default function HomeScreen() {
       {showAddressModal && <AddressModal />}
       
       {showCheckout && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-3xl w-full shadow-2xl border border-white/20 my-8">
-            <CheckoutPage
-              cartItems={cart}
-              stores={stores}
-              onBack={() => setShowCheckout(false)}
-              onCheckout={handleCheckout}
-              getTotalPrice={getTotalPrice}
-              removeFromCart={removeFromCart}
-              addToCart={addToCart}
-              selectedPaymentMethod={selectedPaymentMethod}
-              onPaymentMethodChange={setSelectedPaymentMethod}
-              deliveryAddress={deliveryAddress}
-              onEditAddress={() => {
-                setShowAddressModal(true);
-              }}
-              fulfillmentType={fulfillmentType}
-              onFulfillmentTypeChange={setFulfillmentType}
-            />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-2xl max-w-4xl w-full shadow-2xl border border-white/20 max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="flex-shrink-0 p-4 sm:p-6">
+              <CheckoutPage
+                cartItems={cart}
+                stores={stores}
+                onBack={() => setShowCheckout(false)}
+                onCheckout={handleCheckout}
+                getTotalPrice={getTotalPrice}
+                removeFromCart={removeFromCart}
+                addToCart={addToCart}
+                selectedPaymentMethod={selectedPaymentMethod}
+                onPaymentMethodChange={setSelectedPaymentMethod}
+                deliveryAddress={deliveryAddress}
+                onEditAddress={() => {
+                  setShowAddressModal(true);
+                }}
+                fulfillmentType={fulfillmentType}
+                onFulfillmentTypeChange={setFulfillmentType}
+              />
+            </div>
           </div>
         </div>
       )}
