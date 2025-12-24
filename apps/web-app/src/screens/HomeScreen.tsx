@@ -64,7 +64,7 @@ export default function HomeScreen() {
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set(["All"]));
   const [showBrandDropdown, setShowBrandDropdown] = useState<boolean>(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("cod");
-  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [showCheckoutPaymentModal, setShowCheckoutPaymentModal] = useState<boolean>(false);
   const [orderPlaced, setOrderPlaced] = useState<boolean>(false);
   const [deliveryAddress, setDeliveryAddress] = useState<string>("123 Main Street, Apt 4B, New York, NY 10001");
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
@@ -1226,85 +1226,26 @@ export default function HomeScreen() {
         }
       }, 2000);
     } else {
-      setShowPaymentModal(true);
+      // For Card/UPI, directly place order
+      setOrderPlaced(true);
+      setTimeout(() => {
+        setOrderPlaced(false);
+        // Remove only items from the checked-out store
+        setCart((prevCart) => prevCart.filter((item) => item.storeId !== storeId));
+        setShowCheckout(false);
+        // If no more items in cart, reset the UI
+        const remainingItems = cart.filter((item) => item.storeId !== storeId);
+        if (remainingItems.length === 0) {
+          setShowCatalog(false);
+          setSelectedStore(null);
+          setCurrentTab("chat");
+          setShowConversation(false);
+        }
+      }, 2000);
     }
   };
 
-  function PaymentModal() {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">Enter Payment Details</h2>
-          
-          <div className="space-y-4 mb-6">
-            {selectedPaymentMethod === "card" && (
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Card Number"
-                  className="w-full px-4 py-3 bg-white/10 text-white placeholder-white/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="MM/YY"
-                    className="w-full px-4 py-3 bg-white/10 text-white placeholder-white/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  <input
-                    type="text"
-                    placeholder="CVV"
-                    className="w-full px-4 py-3 bg-white/10 text-white placeholder-white/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
-              </div>
-            )}
-            {selectedPaymentMethod === "upi" && (
-              <input
-                type="text"
-                placeholder="Enter UPI ID (e.g., user@bank)"
-                className="w-full px-4 py-3 bg-white/10 text-white placeholder-white/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            )}
-          </div>
 
-          <div className="bg-white/10 rounded-lg p-4 mb-6">
-            <div className="flex justify-between text-white mb-2">
-              <span>Amount:</span>
-              <span className="font-bold">${getTotalPrice()}</span>
-            </div>
-            <div className="flex justify-between text-white/70 text-sm">
-              <span>Payment Method:</span>
-              <span className="capitalize">{selectedPaymentMethod}</span>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              className="flex-1 px-4 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all font-semibold"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                setOrderPlaced(true);
-                setShowPaymentModal(false);
-                setTimeout(() => {
-                  setOrderPlaced(false);
-                  setShowCatalog(false);
-                  setSelectedStore(null);
-                  setCart([]);
-                }, 2000);
-              }}
-              className="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all font-semibold"
-            >
-              Pay ${getTotalPrice()}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const saveOrder = () => {
     if (selectedStore) {
@@ -1390,6 +1331,55 @@ export default function HomeScreen() {
 
           <button
             onClick={() => setShowAddressModal(false)}
+            className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all font-semibold"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function CheckoutPaymentModal() {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+        <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Select Payment Method</h2>
+            <button
+              onClick={() => setShowCheckoutPaymentModal(false)}
+              className="text-white/70 hover:text-white text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            {[
+              { label: '💳 Card', value: 'card', description: 'Credit or Debit Card' },
+              { label: '📱 UPI', value: 'upi', description: 'Google Pay, PhonePe, Paytm' },
+              { label: '🚚 COD', value: 'cod', description: 'Cash on Delivery' },
+            ].map((method) => (
+              <button
+                key={method.value}
+                onClick={() => {
+                  setSelectedPaymentMethod(method.value);
+                  setShowCheckoutPaymentModal(false);
+                }}
+                className={`w-full p-4 rounded-lg text-left transition-all ${
+                  selectedPaymentMethod === method.value
+                    ? "bg-blue-500/40 border-2 border-blue-400"
+                    : "bg-white/10 border-2 border-transparent hover:bg-white/20"
+                }`}
+              >
+                <p className="text-white font-semibold mb-1">{method.label}</p>
+                <p className="text-white/70 text-sm">{method.description}</p>
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setShowCheckoutPaymentModal(false)}
             className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all font-semibold"
           >
             Done
@@ -2090,16 +2080,16 @@ export default function HomeScreen() {
         )}
 
         {/* Small Checkout Button Below Chat */}
-        {currentTab === "chat" && getCartCount() > 0 && (
+        {currentTab === "chat" && getCartCount() > 0 && selectedStore && (
           <div className="mt-4">
             <div
               className="w-full px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-lg text-white font-semibold transition-all flex flex-col gap-2"
-              title="Change Payment Method"
-              onClick={() => setShowPaymentModal(true)}
-              style={{ cursor: 'pointer' }}
             >
               <div className="flex items-center justify-between w-full">
-                <div className="flex flex-col items-start">
+                <div 
+                  className="flex flex-col items-start flex-1"
+                  title="Payment Method"
+                >
                   <span className="text-sm">Payment Method</span>
                   <span className="text-xs text-white/70 capitalize mt-1">
                     {selectedPaymentMethod === 'card' && '💳 Credit Card'}
@@ -2107,17 +2097,25 @@ export default function HomeScreen() {
                     {selectedPaymentMethod === 'cod' && '🚚 Cash on Delivery'}
                   </span>
                 </div>
-                <div className="flex items-center gap-6 ml-auto">
+                <button
+                  onClick={() => {
+                    setShowCheckoutPaymentModal(true);
+                  }}
+                  title="Change Payment Method"
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all flex items-center justify-center"
+                >
+                  <ShoppingCart className="w-5 h-5 text-white" />
+                </button>
+                <div className="flex items-center gap-4 ml-4">
                   <span className="text-lg font-bold text-green-300 whitespace-nowrap">${getTotalPrice()}</span>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCheckout(true);
+                    onClick={() => {
+                      handleCheckout(selectedStore.id);
                     }}
                     className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg text-white font-bold transition-all flex items-center gap-2 whitespace-nowrap"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    Checkout
+                    Place Order
                   </button>
                 </div>
               </div>
@@ -2441,9 +2439,10 @@ export default function HomeScreen() {
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-      {showPaymentModal && <PaymentModal />}
+
       {orderPlaced && <OrderConfirmation />}
       {showAddressModal && <AddressModal />}
+      {showCheckoutPaymentModal && <CheckoutPaymentModal />}
       
       {showCheckout && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
@@ -2459,6 +2458,7 @@ export default function HomeScreen() {
                 addToCart={addToCart}
                 selectedPaymentMethod={selectedPaymentMethod}
                 onPaymentMethodChange={setSelectedPaymentMethod}
+                onEditPayment={() => setShowCheckoutPaymentModal(true)}
                 deliveryAddress={deliveryAddress}
                 onEditAddress={() => {
                   setShowAddressModal(true);
