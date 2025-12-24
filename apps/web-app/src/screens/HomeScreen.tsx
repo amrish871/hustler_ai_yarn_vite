@@ -1198,11 +1198,16 @@ export default function HomeScreen() {
     }
   };
 
-  const getTotalPrice = () =>
-    cart
+  const getTotalPrice = () => {
+    const subtotal = cart
       .filter((c) => c.storeId === selectedStore?.id)
-      .reduce((sum, item) => sum + item.price * item.quantity, 0)
-      .toFixed(2);
+      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    
+    // Add delivery charges if delivery is selected and order is less than $20
+    const deliveryCharge = fulfillmentType === 'delivery' && subtotal < 20 ? 5 : 0;
+    
+    return (subtotal + deliveryCharge).toFixed(2);
+  };
   const getCartCount = () =>
     cart
       .filter((c) => c.storeId === selectedStore?.id)
@@ -2091,22 +2096,24 @@ export default function HomeScreen() {
                   title="Payment Method"
                 >
                   <span className="text-sm">Payment Method</span>
-                  <span className="text-xs text-white/70 capitalize mt-1">
-                    {selectedPaymentMethod === 'card' && '💳 Credit Card'}
-                    {selectedPaymentMethod === 'upi' && '📱 UPI'}
-                    {selectedPaymentMethod === 'cod' && '🚚 Cash on Delivery'}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-white/70 capitalize">
+                      {selectedPaymentMethod === 'card' && '💳 Credit Card'}
+                      {selectedPaymentMethod === 'upi' && '📱 UPI'}
+                      {selectedPaymentMethod === 'cod' && '🚚 Cash on Delivery'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setShowCheckoutPaymentModal(true);
+                      }}
+                      title="Change Payment Method"
+                      className="p-1 bg-white/10 hover:bg-white/20 rounded-full transition-all flex items-center justify-center"
+                    >
+                      <ChevronDown className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowCheckoutPaymentModal(true);
-                  }}
-                  title="Change Payment Method"
-                  className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all flex items-center justify-center"
-                >
-                  <ShoppingCart className="w-5 h-5 text-white" />
-                </button>
-                <div className="flex items-center gap-4 ml-4">
+                <div className="flex items-center gap-4 ml-auto">
                   <span className="text-lg font-bold text-green-300 whitespace-nowrap">${getTotalPrice()}</span>
                   <button
                     onClick={() => {
@@ -2395,35 +2402,80 @@ export default function HomeScreen() {
                   </span>
                 </div>
 
-                <div className="w-full bg-white/10 rounded-xl p-4 mb-4">
-                  <h4 className="text-white font-semibold mb-3">Payment Method</h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: "💳 Card", value: "card" },
-                      { label: "📱 UPI", value: "upi" },
-                      { label: "🚚 COD", value: "cod" },
-                    ].map((method) => (
-                      <button
-                        key={method.value}
-                        onClick={() => setSelectedPaymentMethod(method.value)}
-                        className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                          selectedPaymentMethod === method.value
-                            ? "bg-blue-500 text-white border-2 border-blue-400"
-                            : "bg-white/10 text-white/70 hover:bg-white/20 border-2 border-transparent"
-                        }`}
-                      >
-                        {method.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="bg-white/5 rounded-xl p-3 mb-3 flex items-center justify-between">
+                  <span className="text-white/70 text-sm">Delivery Charges</span>
+                  <span className="text-white font-semibold">
+                    {fulfillmentType === 'delivery' && getTotalPrice() < 20 ? '$5.00' : 'FREE'}
+                  </span>
                 </div>
 
-                <button 
-                  onClick={() => setShowCheckout(true)}
-                  className="w-full py-3 bg-green-500 hover:bg-green-600 rounded-full text-white font-bold"
-                >
-                  Checkout
-                </button>
+                <div className="w-full px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-lg text-white font-semibold transition-all flex flex-col gap-2">
+                  <div className="flex items-center justify-between w-full">
+                    <div 
+                      className="flex flex-col items-start flex-1"
+                      title="Payment Method"
+                    >
+                      <span className="text-sm">Payment Method</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-white/70 capitalize">
+                          {selectedPaymentMethod === 'card' && '💳 Credit Card'}
+                          {selectedPaymentMethod === 'upi' && '📱 UPI'}
+                          {selectedPaymentMethod === 'cod' && '🚚 Cash on Delivery'}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setShowCheckoutPaymentModal(true);
+                          }}
+                          title="Change Payment Method"
+                          className="p-1 bg-white/10 hover:bg-white/20 rounded-full transition-all flex items-center justify-center"
+                        >
+                          <ChevronDown className="w-4 h-4 text-white" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 ml-auto">
+                      <span className="text-lg font-bold text-green-300 whitespace-nowrap">${getTotalPrice()}</span>
+                      <button
+                        onClick={() => {
+                          handleCheckout(selectedStore?.id || 0);
+                        }}
+                        className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg text-white font-bold transition-all flex items-center gap-2 whitespace-nowrap"
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        Place Order
+                      </button>
+                    </div>
+                  </div>
+                  {/* Fulfillment type selection */}
+                  <div className="flex gap-4 mt-2">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="fulfillmentType"
+                        value="delivery"
+                        checked={fulfillmentType === 'delivery'}
+                        onChange={e => { e.stopPropagation(); setFulfillmentType('delivery'); }}
+                      />
+                      <span className="text-xs">Delivery</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="fulfillmentType"
+                        value="pickup"
+                        checked={fulfillmentType === 'pickup'}
+                        onChange={e => { e.stopPropagation(); setFulfillmentType('pickup'); }}
+                      />
+                      <span className="text-xs">Store Pickup</span>
+                    </label>
+                  </div>
+                  {/* Min order info */}
+                  {selectedStore && fulfillmentType === 'delivery' && (
+                    <div className="text-xs text-yellow-300 mt-2">
+                      Min order $20 to avoid delivery charges
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="text-center py-12">
