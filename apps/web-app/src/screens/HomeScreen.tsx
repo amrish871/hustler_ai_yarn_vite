@@ -22,7 +22,7 @@ import CheckoutPage from "../components/CheckoutPage";
 
 type Message = {
   text?: string;
-  image?: string | ArrayBuffer | null;
+  image?: string | null;
   sender: "user" | "ai";
   recommendations?: Array<{ storeId: number; store: Store; product: Product }>;
 };
@@ -45,7 +45,7 @@ type Product = {
   category: string;
   image: string;
 };
-type CartItem = Product & { quantity: number; storeId: number };
+type CartItem = Omit<Product, 'quantity'> & { quantity: number; storeId: number };
 export default function HomeScreen() {
       const [storeProductSuggestions, setStoreProductSuggestions] = useState<{store: Store, product: Product}[]>([]);
     const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('delivery');
@@ -66,6 +66,7 @@ export default function HomeScreen() {
   const [showBrandDropdown, setShowBrandDropdown] = useState<boolean>(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("cod");
   const [showCheckoutPaymentModal, setShowCheckoutPaymentModal] = useState<boolean>(false);
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [orderPlaced, setOrderPlaced] = useState<boolean>(false);
   const [deliveryAddress, setDeliveryAddress] = useState<string>("123 Main Street, Apt 4B, New York, NY 10001");
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
@@ -620,8 +621,7 @@ export default function HomeScreen() {
   const toggleListening = () => {
     if (!isListening) {
       // Start listening
-      const SpeechRecognition =
-        window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
         alert("Speech Recognition not supported in your browser");
         return;
@@ -1103,9 +1103,10 @@ export default function HomeScreen() {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
+        const result = event.target?.result as string;
         setMessages((prev: Message[]) => [
           ...prev,
-          { image: event.target?.result, sender: "user" },
+          { image: result, sender: "user" },
         ]);
         setShowConversation(true);
         setTimeout(() => {
@@ -1160,7 +1161,7 @@ export default function HomeScreen() {
     setShowConversation(true);
   };
 
-  const addToCart = (item: Product) => {
+  const addToCart = (item: Product | CartItem) => {
     if (!selectedStore) return;
     const existing = cart.find(
       (c) => c.id === item.id && c.storeId === selectedStore.id
@@ -1174,7 +1175,7 @@ export default function HomeScreen() {
         )
       );
     } else {
-      setCart([...cart, { ...item, quantity: 1, storeId: selectedStore.id }]);
+      setCart([...cart, { ...item as Omit<Product, 'quantity'>, quantity: 1, storeId: selectedStore.id }]);
     }
   };
 
@@ -1200,9 +1201,10 @@ export default function HomeScreen() {
     }
   };
 
-  const getTotalPrice = () => {
+  const getTotalPrice = (storeId?: number) => {
+    const targetStoreId = storeId || selectedStore?.id;
     const subtotal = cart
-      .filter((c) => c.storeId === selectedStore?.id)
+      .filter((c) => c.storeId === targetStoreId)
       .reduce((sum, item) => sum + item.price * item.quantity, 0);
     
     // Add delivery charges if delivery is selected and order is less than $20
@@ -1661,7 +1663,7 @@ export default function HomeScreen() {
         )}
 
         <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto space-y-2">
-          {selectedStore.catalog.map((item) => {
+          {selectedStore && selectedStore.catalog.map((item) => {
             const cartItem = cart.find(
               (c) => c.id === item.id && c.storeId === selectedStore.id
             );
@@ -1775,9 +1777,9 @@ export default function HomeScreen() {
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-4 bg-white/5 p-3 rounded-lg">
-          {selectedStore && (
+        {/* Tab Navigation - Only show when store is selected */}
+        {selectedStore && (
+          <div className="flex gap-2 mb-4 bg-white/5 p-3 rounded-lg">
             <button
               onClick={() => setCurrentTab("catalog")}
               className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-3 border ${
@@ -1789,40 +1791,40 @@ export default function HomeScreen() {
               <Grid className="w-4 h-4" />
               Catalog
             </button>
-          )}
-          <button
-            onClick={() => setCurrentTab("cart")}
-            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 border relative ${
-              currentTab === "cart"
-                ? "bg-blue-500 text-white border-blue-400"
-                : "bg-transparent text-white/70 hover:text-white border-white/30"
-            }`}
-          >
-            <div className="relative flex items-center">
-              <ShoppingCart className="w-5 h-5" />
-              {getCartCount() > 0 && (
-                <span className="absolute -top-3 left-2.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                  {getCartCount()}
-                </span>
-              )}
-            </div>
-            <span className="text-sm">Cart</span>
-          </button>
-          <button
-            onClick={() => setCurrentTab("chat")}
-            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-3 border ${
-              currentTab === "chat"
-                ? "bg-blue-500 text-white border-blue-400"
-                : "bg-transparent text-white/70 hover:text-white border-white/30"
-            }`}
-          >
-            <MessageSquare className="w-4 h-4" />
-            Chat
-          </button>
-        </div>
+            <button
+              onClick={() => setCurrentTab("cart")}
+              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 border relative ${
+                currentTab === "cart"
+                  ? "bg-blue-500 text-white border-blue-400"
+                  : "bg-transparent text-white/70 hover:text-white border-white/30"
+              }`}
+            >
+              <div className="relative flex items-center">
+                <ShoppingCart className="w-5 h-5" />
+                {getCartCount() > 0 && (
+                  <span className="absolute -top-3 left-2.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                    {getCartCount()}
+                  </span>
+                )}
+              </div>
+              <span className="text-sm">Cart</span>
+            </button>
+            <button
+              onClick={() => setCurrentTab("chat")}
+              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-3 border ${
+                currentTab === "chat"
+                  ? "bg-blue-500 text-white border-blue-400"
+                  : "bg-transparent text-white/70 hover:text-white border-white/30"
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              Chat
+            </button>
+          </div>
+        )}
 
-        {/* Chat Tab - Different behavior based on store selection */}
-        {currentTab === "chat" && (
+        {/* Chat Section - Show by default when no store, or when chat tab is selected */}
+        {(!selectedStore || currentTab === "chat") && (
           <>
             {selectedStore ? (
               // Store-specific chat
@@ -2337,7 +2339,7 @@ export default function HomeScreen() {
                 <div className="bg-white/5 rounded-xl p-3 mb-3 flex items-center justify-between">
                   <span className="text-white/70 text-sm">Delivery Charges</span>
                   <span className="text-white font-semibold">
-                    {fulfillmentType === 'delivery' && getTotalPrice() < 20 ? '$5.00' : 'FREE'}
+                    {fulfillmentType === 'delivery' && (cart.filter((c) => c.storeId === selectedStore?.id).reduce((sum, item) => sum + item.price * item.quantity, 0)) < 20 ? '$5.00' : 'FREE'}
                   </span>
                 </div>
 
