@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, MapPin, Menu, X, LogOut, CreditCard, Package, TrendingUp, Bell, Globe } from 'lucide-react';
+import { MapPin, Menu, X, LogOut, CreditCard, Package, TrendingUp, Bell, Globe, ShoppingCart } from 'lucide-react';
 import { Language, t } from '../translations';
 
 interface NavbarProps {
@@ -9,9 +9,11 @@ interface NavbarProps {
   language: Language;
   onLanguageChange: (lang: Language) => void;
   orders?: any[];
+  cartCount?: number;
+  onCartClick?: () => void;
 }
 
-export default function Navbar({ onMenuClick, user, language, onLanguageChange, orders = [] }: NavbarProps) {
+export default function Navbar({ onMenuClick, user, language, onLanguageChange, orders = [], cartCount = 0, onCartClick }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -117,31 +119,34 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-6">
-            <button
-              onClick={() => navigate('/home')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                isActive('/home')
-                  ? 'bg-blue-600 text-white'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Home className="w-5 h-5" />
-              <span>Home</span>
-            </button>
-          </div>
+          {/* Center: Cart & Profile */}
+          <div className="flex items-center gap-6">
+            {/* Cart Icon */}
+            {onCartClick && (
+              <button
+                onClick={onCartClick}
+                className="relative w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
+                title="Shopping Cart"
+              >
+                <ShoppingCart className="w-6 h-6 text-white" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            )}
 
-          {/* User Profile Button & Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-3 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all"
-            >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">{userInitials}</span>
-              </div>
-            </button>
+            {/* User Profile Button & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-3 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all"
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">{userInitials}</span>
+                </div>
+              </button>
 
             {/* Dropdown Menu */}
             {showUserMenu && (
@@ -232,6 +237,7 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
             >
               <Menu className="w-6 h-6" />
             </button>
+          </div>
           </div>
         </div>
       </div>

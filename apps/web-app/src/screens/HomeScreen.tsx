@@ -16,11 +16,14 @@ import {
   Package,
   ChevronDown,
 } from "lucide-react";
+import { useCart } from "../context/CartContext";
+import CheckoutPage from "../components/CheckoutPage";
 
 type Message = {
   text?: string;
   image?: string | ArrayBuffer | null;
   sender: "user" | "ai";
+  recommendations?: Array<{ storeId: number; store: Store; product: Product }>;
 };
 type Store = {
   id: number;
@@ -46,6 +49,7 @@ export default function HomeScreen() {
       const [storeProductSuggestions, setStoreProductSuggestions] = useState<{store: Store, product: Product}[]>([]);
     const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('delivery');
   const [showConversation, setShowConversation] = useState<boolean>(false);
+  const [showCheckout, setShowCheckout] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState<string>("");
@@ -68,7 +72,15 @@ export default function HomeScreen() {
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [orders, setOrders] = useState<any[]>([]);
-
+  const [showShoppingAssistant, setShowShoppingAssistant] = useState<boolean>(false);
+  const [assistantStep, setAssistantStep] = useState<number>(0);
+  const [assistantAnswers, setAssistantAnswers] = useState<Record<string, string>>({});
+  const [assistantSuggestions, setAssistantSuggestions] = useState<Array<{store: Store, product: Product}>>([]);
+  const [recommendationQuantities, setRecommendationQuantities] = useState<Record<string, number>>({})
+  
+  // Cart context
+  const { setCartCount, setOnCartClick } = useCart();
+  
   const addresses = [
     { id: 1, label: "Home", address: "123 Main Street, Apt 4B, New York, NY 10001" },
     { id: 2, label: "Office", address: "456 Business Ave, Suite 200, New York, NY 10002" },
@@ -131,6 +143,228 @@ export default function HomeScreen() {
       inputRef.current.focus();
     }
   }, [currentTab, showConversation]);
+
+  // Sync cart state with CartContext for navbar
+  useEffect(() => {
+    const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    setCartCount(totalCartCount);
+    setOnCartClick(() => () => {
+      setShowCheckout(true);
+    });
+  }, [cart, setCartCount, setOnCartClick]);
+
+  // Get all products from all stores for the shopping assistant
+  const getAllProducts = (): Product[] => {
+    const allProducts: Product[] = [];
+    stores.forEach((store) => {
+      allProducts.push(...store.catalog);
+    });
+    return allProducts;
+  };
+
+  // Shopping Assistant questions
+  const getAssistantQuestions = () => {
+    return [
+      { key: "type", label: "What product are you looking for? (e.g., fan, milk, pizza)" },
+      { key: "budget", label: "What's your budget range? (e.g., $100-500)" },
+      { key: "brand", label: "Any preferred brand? (type 'skip' to skip)" },
+      { key: "features", label: "Any must-have features? (type 'skip' to skip)" },
+      { key: "color", label: "Preferred color? (type 'skip' to skip)" },
+    ];
+  };
+
+  // Filter products for shopping assistant (includes store info)
+  const filterAssistantProducts = (answers: Record<string, string>): Array<{store: Store, product: Product}> => {
+    const results: Array<{store: Store, product: Product}> = [];
+
+    stores.forEach((store) => {
+      let filtered = store.catalog;
+
+      // Filter by product type
+      if (answers.type) {
+        const searchTerm = answers.type.toLowerCase();
+        filtered = filtered.filter(
+          (p) =>
+            p.name.toLowerCase().includes(searchTerm) ||
+            p.category.toLowerCase().includes(searchTerm) ||
+            p.brand?.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      // Filter by budget
+      if (answers.budget) {
+        const budgetNum = Number(answers.budget.replace(/[^\d]/g, ""));
+        if (budgetNum > 0) {
+          filtered = filtered.filter((p) => p.price <= budgetNum);
+        }
+      }
+
+      // Filter by brand
+      if (answers.brand && answers.brand.toLowerCase() !== "skip") {
+        filtered = filtered.filter(
+          (p) =>
+            p.brand?.toLowerCase().includes(answers.brand.toLowerCase()) || false
+        );
+      }
+
+      // Filter by color
+      if (answers.color && answers.color.toLowerCase() !== "skip") {
+        filtered = filtered.filter((p) =>
+          p.name.toLowerCase().includes(answers.color.toLowerCase())
+        );
+      }
+
+      // Add results with store info
+      filtered.forEach((product) => {
+        results.push({ store, product });
+      });
+    });
+
+    return results.slice(0, 3); // Show top 3 matches
+  };
+
+  // Handle assistant answer in chat
+  const handleAssistantAnswer = (answer: string) => {
+    const questions = getAssistantQuestions();
+    const currentQuestion = questions[assistantStep];
+
+    if (!currentQuestion) return;
+
+    const newAnswers = { ...assistantAnswers, [currentQuestion.key]: answer };
+    setAssistantAnswers(newAnswers);
+
+    // Post user's answer to chat
+    setMessages((prev) => [
+      ...prev,
+      { text: answer, sender: "user" },
+    ]);
+
+    // Check if we should show suggestions
+    if (
+      answer.toLowerCase().includes("just show") ||
+      assistantStep >= questions.length - 1
+    ) {
+      const filtered = filterAssistantProducts(newAnswers);
+      setAssistantSuggestions(filtered);
+      
+      // Post suggestion message with recommendations
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: `Great! Here are my recommendations based on your answers:`,
+          sender: "ai",
+          recommendations: filtered.map((item) => ({
+            storeId: item.store.id,
+            store: item.store,
+            product: item.product,
+          })),
+        },
+      ]);
+      setShowShoppingAssistant(false);
+      return;
+    }
+
+    // Move to next question
+    if (assistantStep < questions.length - 1) {
+      setAssistantStep(assistantStep + 1);
+      const nextQuestion = questions[assistantStep + 1];
+      
+      setMessages((prev) => [
+        ...prev,
+        { text: nextQuestion.label, sender: "ai" },
+      ]);
+    } else {
+      const filtered = filterAssistantProducts(newAnswers);
+      setAssistantSuggestions(filtered);
+      
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: `Great! Here are my recommendations:`,
+          sender: "ai",
+          recommendations: filtered.map((item) => ({
+            storeId: item.store.id,
+            store: item.store,
+            product: item.product,
+          })),
+        },
+      ]);
+      setShowShoppingAssistant(false);
+    }
+  };
+
+  // Handle selecting a recommendation
+  const handleSelectRecommendation = (storeId: number, product: Product) => {
+    // Find the store
+    const selectedStoreFromRecommendation = stores.find((s) => s.id === storeId);
+    if (!selectedStoreFromRecommendation) return;
+
+    // Get the quantity for this recommendation
+    const key = `${storeId}-${product.id}`;
+    const quantity = recommendationQuantities[key] || 1;
+
+    // Select the store
+    setSelectedStore(selectedStoreFromRecommendation);
+
+    // Add product to cart
+    setTimeout(() => {
+      setCart((prevCart) => {
+        const existingItem = prevCart.find(
+          (c) => c.id === product.id && c.storeId === storeId
+        );
+
+        if (existingItem) {
+          return prevCart.map((c) =>
+            c.id === product.id && c.storeId === storeId
+              ? { ...c, quantity: c.quantity + quantity }
+              : c
+          );
+        } else {
+          return [
+            ...prevCart,
+            { ...product, quantity: quantity, storeId: storeId },
+          ];
+        }
+      });
+
+      // Post message to chat
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: `Great! I've added ${quantity} ${product.image} ${product.name} from ${selectedStoreFromRecommendation.name} to your cart. Would you like to continue shopping or proceed to checkout?`,
+          sender: "ai",
+        },
+      ]);
+    }, 100);
+  };
+
+  const handleAssistantProduct = (product: Product) => {
+    // Close the assistant
+    setShowShoppingAssistant(false);
+
+    // Post the suggestion in chat
+    setMessages((prev) => [
+      ...prev,
+      {
+        text: `Our Shopping Assistant recommends: ${product.image} ${product.name} - $${product.price}${
+          product.brand ? ` (${product.brand})` : ""
+        }`,
+        sender: "ai",
+      },
+    ]);
+
+    // Optionally: auto-select the first available store and add to cart
+    if (selectedStore) {
+      addToCart(product);
+    } else {
+      // Auto-select Fresh Mart as default
+      const firstStore = stores[0];
+      setSelectedStore(firstStore);
+      setTimeout(() => {
+        addToCart(product);
+      }, 100);
+    }
+  };
 
   const stores = [
     {
@@ -533,6 +767,26 @@ export default function HomeScreen() {
       return;
     }
 
+    // Check if user is asking for help/assistance - don't show suggestions in this case
+    const valueLower = value.toLowerCase();
+    if (
+      valueLower.includes("help") ||
+      valueLower.includes("recommend") ||
+      valueLower.includes("suggest") ||
+      valueLower.includes("what should") ||
+      valueLower.includes("what do you suggest") ||
+      valueLower.includes("i need help") ||
+      valueLower.includes("can you help") ||
+      valueLower.includes("any suggestions") ||
+      valueLower.includes("what do you recommend") ||
+      valueLower.includes("guide me") ||
+      valueLower.includes("assist me")
+    ) {
+      setShowSuggestions(false);
+      setStoreProductSuggestions([]);
+      return;
+    }
+
     const searchLower = value.toLowerCase();
     if (!selectedStore) {
       // No store selected: search all stores for product
@@ -583,8 +837,48 @@ export default function HomeScreen() {
       const userMessage = inputText.toLowerCase();
       console.log("User message:", userMessage);
       console.log("Selected store:", selectedStore);
+      
+      // If in shopping assistant mode, handle as assistant answer
+      if (showShoppingAssistant && assistantStep < getAssistantQuestions().length) {
+        const answerText = inputText.trim();
+        setInputText("");
+        handleAssistantAnswer(answerText);
+        return;
+      }
+      
       setMessages((prev) => [...prev, { text: inputText, sender: "user" }]);
       setInputText("");
+      
+      // Check if user is asking for help/recommendations - trigger shopping assistant
+      if (
+        userMessage.includes("help") ||
+        userMessage.includes("recommend") ||
+        userMessage.includes("suggest") ||
+        userMessage.includes("what should") ||
+        userMessage.includes("what do you suggest") ||
+        userMessage.includes("i need help") ||
+        userMessage.includes("can you help") ||
+        userMessage.includes("any suggestions") ||
+        userMessage.includes("what do you recommend") ||
+        userMessage.includes("guide me") ||
+        userMessage.includes("assist me")
+      ) {
+        setShowShoppingAssistant(true);
+        setAssistantStep(0);
+        setAssistantAnswers({});
+        setAssistantSuggestions([]);
+        
+        const aiResponse = `Sure! Let me help you find the perfect product. I'll ask you a few questions to understand your needs better.`;
+        setTimeout(() => {
+          const questions = getAssistantQuestions();
+          setMessages((prev: Message[]) => [
+            ...prev,
+            { text: aiResponse, sender: "ai" },
+            { text: questions[0].label, sender: "ai" },
+          ]);
+        }, 500);
+        return;
+      }
       
       // Check if user wants to browse stores
       if (
@@ -882,22 +1176,24 @@ export default function HomeScreen() {
     }
   };
 
-  const removeFromCart = (itemId: number) => {
-    if (!selectedStore) return;
+  const removeFromCart = (itemId: number, storeId?: number) => {
+    const targetStoreId = storeId || selectedStore?.id;
+    if (!targetStoreId) return;
+    
     const existing = cart.find(
-      (c) => c.id === itemId && c.storeId === selectedStore.id
+      (c) => c.id === itemId && c.storeId === targetStoreId
     );
     if (existing && existing.quantity > 1) {
       setCart(
         cart.map((c) =>
-          c.id === itemId && c.storeId === selectedStore.id
+          c.id === itemId && c.storeId === targetStoreId
             ? { ...c, quantity: c.quantity - 1 }
             : c
         )
       );
     } else {
       setCart(
-        cart.filter((c) => !(c.id === itemId && c.storeId === selectedStore.id))
+        cart.filter((c) => !(c.id === itemId && c.storeId === targetStoreId))
       );
     }
   };
@@ -912,14 +1208,22 @@ export default function HomeScreen() {
       .filter((c) => c.storeId === selectedStore?.id)
       .reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = (storeId: number) => {
     if (selectedPaymentMethod === "cod") {
       setOrderPlaced(true);
       setTimeout(() => {
         setOrderPlaced(false);
-        setShowCatalog(false);
-        setSelectedStore(null);
-        setCart([]);
+        // Remove only items from the checked-out store
+        setCart((prevCart) => prevCart.filter((item) => item.storeId !== storeId));
+        setShowCheckout(false);
+        // If no more items in cart, reset the UI
+        const remainingItems = cart.filter((item) => item.storeId !== storeId);
+        if (remainingItems.length === 0) {
+          setShowCatalog(false);
+          setSelectedStore(null);
+          setCurrentTab("chat");
+          setShowConversation(false);
+        }
       }, 2000);
     } else {
       setShowPaymentModal(true);
@@ -1338,7 +1642,6 @@ export default function HomeScreen() {
             onClick={() => {
               setShowCatalog(false);
               setSelectedStore(null);
-              setCart([]);
             }}
             className="text-white/70 hover:text-white"
           >
@@ -1417,7 +1720,7 @@ export default function HomeScreen() {
 
         {getCartCount() > 0 && (
           <button 
-            onClick={handleCheckout}
+            onClick={() => setShowCheckout(true)}
             className="w-full mt-3 py-3 bg-green-500 hover:bg-green-600 rounded-full text-white font-bold"
           >
             Checkout
@@ -1487,16 +1790,18 @@ export default function HomeScreen() {
           >
             Chat
           </button>
-          <button
-            onClick={() => setCurrentTab("catalog")}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-              currentTab === "catalog"
-                ? "bg-blue-500 text-white"
-                : "bg-transparent text-white/70 hover:text-white"
-            }`}
-          >
-            Catalog
-          </button>
+          {selectedStore && (
+            <button
+              onClick={() => setCurrentTab("catalog")}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                currentTab === "catalog"
+                  ? "bg-blue-500 text-white"
+                  : "bg-transparent text-white/70 hover:text-white"
+              }`}
+            >
+              Catalog
+            </button>
+          )}
           <button
             onClick={() => setCurrentTab("cart")}
             className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all relative ${
@@ -1514,69 +1819,146 @@ export default function HomeScreen() {
           </button>
         </div>
 
-        {/* Chat Tab */}
+        {/* Chat Tab - Different behavior based on store selection */}
         {currentTab === "chat" && (
           <>
-            <div className="bg-white/5 rounded-2xl p-4 h-64 overflow-y-auto mb-4 space-y-3">
-              {messages.length === 0 ? (
-                <p className="text-white/50 text-center mt-20">No messages yet</p>
-              ) : (
-                <>
-                  {messages.map((msg, idx) => (
-                    <div
-                      key={`msg-${idx}-${msg.sender}`}
-                      className={`flex ${
-                        msg.sender === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-xs px-4 py-2 rounded-2xl ${
-                          msg.sender === "user"
-                            ? "bg-blue-500 text-white"
-                            : "bg-white/20 text-white"
-                        }`}
-                      >
-                        {msg.image ? (
-                          <img
-                            src={msg.image}
-                            alt="Uploaded"
-                            className="rounded-lg max-w-full"
-                          />
-                        ) : (
-                          msg.text
+            {selectedStore ? (
+              // Store-specific chat
+              <div className="bg-white/5 rounded-2xl p-4 h-64 overflow-y-auto mb-4 space-y-3">
+                <p className="text-white/70 text-center mt-20">
+                  Browse {selectedStore.name} catalog or add items to cart
+                </p>
+              </div>
+            ) : (
+              // General chat (no store selected)
+              <div className="bg-white/5 rounded-2xl p-4 h-64 overflow-y-auto mb-4 space-y-3">
+                {messages.length === 0 ? (
+                  <p className="text-white/50 text-center mt-20">No messages yet</p>
+                ) : (
+                  <>
+                    {messages.map((msg, idx) => (
+                      <div key={`msg-${idx}-${msg.sender}`}>
+                        <div
+                          className={`flex ${
+                            msg.sender === "user" ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          <div
+                            className={`max-w-xs px-4 py-2 rounded-2xl ${
+                              msg.sender === "user"
+                                ? "bg-blue-500 text-white"
+                                : "bg-white/20 text-white"
+                            }`}
+                          >
+                            {msg.image ? (
+                              <img
+                                src={msg.image}
+                                alt="Uploaded"
+                                className="rounded-lg max-w-full"
+                              />
+                            ) : (
+                              msg.text
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Render recommendations if present */}
+                        {msg.recommendations && msg.recommendations.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {msg.recommendations.map((rec, recIdx) => {
+                              const key = `${rec.storeId}-${rec.product.id}`;
+                              const qty = recommendationQuantities[key] || 1;
+                              return (
+                                <div
+                                  key={`rec-${idx}-${recIdx}`}
+                                  className="bg-white/10 rounded-lg p-3 border border-green-500/30"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="text-2xl flex-shrink-0">{rec.product.image}</div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-semibold text-white">{rec.product.name}</h4>
+                                      {rec.product.brand && (
+                                        <p className="text-xs text-white/70">Brand: {rec.product.brand}</p>
+                                      )}
+                                      {rec.product.quantity && (
+                                        <p className="text-xs text-white/70">{rec.product.quantity}</p>
+                                      )}
+                                      <p className="text-green-400 font-bold mt-1">${rec.product.price}</p>
+                                      <p className="text-xs text-blue-300 mt-1">Store: {rec.store.name}</p>
+                                    </div>
+                                    <div className="flex flex-col gap-2 items-end flex-shrink-0">
+                                      <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
+                                        <button
+                                          onClick={() =>
+                                            setRecommendationQuantities((prev) => ({
+                                              ...prev,
+                                              [key]: Math.max(1, (prev[key] || 1) - 1),
+                                            }))
+                                          }
+                                          className="w-6 h-6 bg-white/20 hover:bg-white/30 rounded flex items-center justify-center text-white"
+                                        >
+                                          −
+                                        </button>
+                                        <span className="text-white font-semibold min-w-[1.5rem] text-center">{qty}</span>
+                                        <button
+                                          onClick={() =>
+                                            setRecommendationQuantities((prev) => ({
+                                              ...prev,
+                                              [key]: (prev[key] || 1) + 1,
+                                            }))
+                                          }
+                                          className="w-6 h-6 bg-white/20 hover:bg-white/30 rounded flex items-center justify-center text-white"
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                      <button
+                                        onClick={() => handleSelectRecommendation(rec.storeId, rec.product)}
+                                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                                      >
+                                        Add
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
-                  {/* Store product suggestions dropdown */}
-                  {storeProductSuggestions.length > 0 && showSuggestions && (
-                    <div className="absolute z-50 bg-white/95 rounded-lg shadow-lg mt-2 w-full max-h-60 overflow-y-auto border border-blue-200">
-                      {storeProductSuggestions.map(({store, product}, idx) => (
-                        <button
-                          key={store.id + '-' + product.id + '-' + idx}
-                          className="w-full text-left px-4 py-2 hover:bg-blue-100 text-blue-900 flex flex-col border-b last:border-b-0"
-                          onClick={() => {
-                            setSelectedStore(store);
-                            setInputText(product.name);
-                            setShowSuggestions(false);
-                            setStoreProductSuggestions([]);
-                            setShowCatalog(true);
-                          }}
-                        >
-                          <span className="font-semibold">{product.name}</span>
-                          <span className="text-xs text-blue-700">{store.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                    ))}
+                    {/* Store product suggestions dropdown */}
+                    {storeProductSuggestions.length > 0 && showSuggestions && !inputText.toLowerCase().match(/help|recommend|suggest|what should|what do you suggest|i need help|can you help|any suggestions|what do you recommend|guide me|assist me/) && (
+                      <div className="absolute z-50 bg-white/95 rounded-lg shadow-lg mt-2 w-full max-h-60 overflow-y-auto border border-blue-200">
+                        {storeProductSuggestions.map(({store, product}, idx) => (
+                          <button
+                            key={store.id + '-' + product.id + '-' + idx}
+                            className="w-full text-left px-4 py-2 hover:bg-blue-100 text-blue-900 flex flex-col border-b last:border-b-0"
+                            onClick={() => {
+                              setSelectedStore(store);
+                              setInputText(product.name);
+                              setShowSuggestions(false);
+                              setStoreProductSuggestions([]);
+                              setShowCatalog(true);
+                            }}
+                          >
+                            <span className="font-semibold">{product.name}</span>
+                            <span className="text-xs text-blue-700">{store.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
 
             <div className="flex gap-2 mb-6">
               <button
                 onClick={() => setShowMediaOptions(!showMediaOptions)}
                 className="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center"
+                title="Upload image"
               >
                 <Image className="w-5 h-5 text-white" />
               </button>
@@ -1587,6 +1969,7 @@ export default function HomeScreen() {
                     ? "bg-red-500 hover:bg-red-600"
                     : "bg-white/10 hover:bg-white/20"
                 }`}
+                title="Voice input"
               >
                 <Mic className="w-5 h-5 text-white" />
               </button>
@@ -1660,7 +2043,7 @@ export default function HomeScreen() {
                   </div>
                 )}
                 {/* Suggestions Dropdown (multi-store) */}
-                {showSuggestions && storeProductSuggestions.length > 0 && (
+                {showSuggestions && storeProductSuggestions.length > 0 && !inputText.toLowerCase().match(/help|recommend|suggest|what should|what do you suggest|i need help|can you help|any suggestions|what do you recommend|guide me|assist me/) && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-blue-950/95 backdrop-blur-md rounded-2xl shadow-lg z-[9999] max-h-64 overflow-y-auto p-2">
                     <div className="space-y-2">
                       {storeProductSuggestions.map(({store, product}, idx) => (
@@ -1729,7 +2112,7 @@ export default function HomeScreen() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCheckout();
+                      setShowCheckout(true);
                     }}
                     className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg text-white font-bold transition-all flex items-center gap-2 whitespace-nowrap"
                   >
@@ -1961,29 +2344,28 @@ export default function HomeScreen() {
             {getCartCount() > 0 ? (
               <>
                 <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto mb-4 space-y-2">
-                  {selectedStore.catalog.map((item) => {
-                    const cartItem = cart.find(
-                      (c) => c.id === item.id && c.storeId === selectedStore.id
-                    );
-                    if (!cartItem) return null;
+                  {cart.map((cartItem) => {
+                    const store = stores.find((s) => s.id === cartItem.storeId);
+                    if (!store) return null;
 
                     return (
                       <div
-                        key={item.id}
+                        key={`${cartItem.storeId}-${cartItem.id}`}
                         className="bg-white/10 rounded-xl p-3 flex items-center gap-3"
                       >
-                        <div className="text-3xl">{item.image}</div>
+                        <div className="text-3xl">{cartItem.image}</div>
                         <div className="flex-1">
                           <h4 className="text-white font-semibold text-sm">
-                            {item.name}
+                            {cartItem.name}
                           </h4>
+                          <p className="text-blue-300 text-xs mb-1">{store.name}</p>
                           <p className="text-green-300 font-bold text-sm">
-                            ${item.price} x {cartItem.quantity}
+                            ${cartItem.price} x {cartItem.quantity}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => removeFromCart(item.id)}
+                            onClick={() => removeFromCart(cartItem.id, cartItem.storeId)}
                             className="w-8 h-8 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
                           >
                             <Minus className="w-4 h-4 text-white" />
@@ -1992,7 +2374,7 @@ export default function HomeScreen() {
                             {cartItem.quantity}
                           </span>
                           <button
-                            onClick={() => addToCart(item)}
+                            onClick={() => addToCart(cartItem)}
                             className="w-8 h-8 bg-green-500/30 hover:bg-green-500/50 rounded-full flex items-center justify-center"
                           >
                             <Plus className="w-4 h-4 text-white" />
@@ -2039,7 +2421,7 @@ export default function HomeScreen() {
                 </div>
 
                 <button 
-                  onClick={handleCheckout}
+                  onClick={() => setShowCheckout(true)}
                   className="w-full py-3 bg-green-500 hover:bg-green-600 rounded-full text-white font-bold"
                 >
                   Checkout
@@ -2058,39 +2440,65 @@ export default function HomeScreen() {
     );
   }
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       {showPaymentModal && <PaymentModal />}
       {orderPlaced && <OrderConfirmation />}
       {showAddressModal && <AddressModal />}
       
-      <div className="w-full max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Voice AI Assistant
-          </h1>
-          <p className="text-blue-200">Speak or type to interact</p>
-          <button
-            onClick={() => setShowAddressModal(true)}
-            className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full transition-all"
-          >
-            <MapPin className="w-5 h-5 text-green-400" />
-            <p className="text-white/90 text-sm">{deliveryAddress}</p>
-          </button>
+      {showCheckout && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-3xl w-full shadow-2xl border border-white/20 my-8">
+            <CheckoutPage
+              cartItems={cart}
+              stores={stores}
+              onBack={() => setShowCheckout(false)}
+              onCheckout={handleCheckout}
+              getTotalPrice={getTotalPrice}
+              removeFromCart={removeFromCart}
+              addToCart={addToCart}
+              selectedPaymentMethod={selectedPaymentMethod}
+              onPaymentMethodChange={setSelectedPaymentMethod}
+              deliveryAddress={deliveryAddress}
+              onEditAddress={() => {
+                setShowAddressModal(true);
+              }}
+              fulfillmentType={fulfillmentType}
+              onFulfillmentTypeChange={setFulfillmentType}
+            />
+          </div>
         </div>
+      )}
+      
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-4xl">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">
+              Voice AI Assistant
+            </h1>
+            <p className="text-blue-200">Speak or type to interact</p>
+            <button
+              onClick={() => setShowAddressModal(true)}
+              className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full transition-all"
+            >
+              <MapPin className="w-5 h-5 text-green-400" />
+              <p className="text-white/90 text-sm">{deliveryAddress}</p>
+            </button>
+          </div>
 
-        <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
-          <div className="flex flex-col items-center">
-            {/* Carousel for Order Grocery / Medicines */}
-            {!showConversation &&
-              !showStoreSearch &&
-              !selectedStore &&
-              !showCatalog && <HeroCarousel />}
+          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
+            <div className="flex flex-col items-center">
+              {/* Carousel for Order Grocery / Medicines */}
+              {!showConversation &&
+                !showStoreSearch &&
+                !selectedStore &&
+                !showCatalog && <HeroCarousel />}
 
-            {showStoreSearch && !selectedStore && <StoreSearch />}
+              {showStoreSearch && !selectedStore && <StoreSearch />}
 
-            {showConversation && <ChatPanel />}
+              {showConversation && <ChatPanel />}
 
-            {showCatalog && selectedStore && !showConversation && <Catalog />}
+              {showCatalog && selectedStore && !showConversation && <Catalog />}
+            </div>
           </div>
         </div>
       </div>

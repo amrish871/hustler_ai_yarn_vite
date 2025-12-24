@@ -2,6 +2,7 @@ import React, { useState }  from 'react'
 import Navbar from './components/Navbar'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { CartProvider, useCart } from './context/CartContext'
 import Login from './screens/Login'
 import { Language } from './translations'
 import HomeScreen from './screens/HomeScreen'
@@ -22,9 +23,16 @@ import Subscriptions from './screens/Subscriptions'
 // import { Language } from './translations'
 
 const ProtectedLayout = ({ children, language, onLanguageChange }: { children: React.ReactNode; language: Language; onLanguageChange: (lang: Language) => void }) => {
+  const { cartCount, onCartClick } = useCart();
+  
   return (
     <>
-      <Navbar language={language} onLanguageChange={onLanguageChange} />
+      <Navbar 
+        language={language} 
+        onLanguageChange={onLanguageChange}
+        cartCount={cartCount}
+        onCartClick={onCartClick || undefined}
+      />
       {children}
     </>
   )
@@ -49,9 +57,11 @@ const App = () => {
   const [language, setLanguage] = useState<Language>('en')
 
   return (
-    <Router>
-      <AppContent language={language} onLanguageChange={setLanguage} />
-    </Router>
+    <CartProvider>
+      <Router>
+        <AppContent language={language} onLanguageChange={setLanguage} />
+      </Router>
+    </CartProvider>
   )
 }
 
