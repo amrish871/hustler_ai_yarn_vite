@@ -1140,6 +1140,7 @@ export default function HomeScreen() {
     setShowStoreSearch(false);
     setSelectedCategory("All");
     setSelectedBrands(new Set(["All"]));
+    setCurrentTab("catalog");
     setMessages([
       { text: `Welcome to ${store.name}! 🛒`, sender: "ai" },
       { text: `What would you like to order?`, sender: "ai" },
