@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Package,
   ChevronDown,
+  Grid,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import CheckoutPage from "../components/CheckoutPage";
@@ -1774,43 +1775,48 @@ export default function HomeScreen() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-4 bg-white/5 p-2 rounded-lg">
-          <button
-            onClick={() => setCurrentTab("chat")}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-              currentTab === "chat"
-                ? "bg-blue-500 text-white"
-                : "bg-transparent text-white/70 hover:text-white"
-            }`}
-          >
-            Chat
-          </button>
+        <div className="flex gap-2 mb-4 bg-white/5 p-3 rounded-lg">
           {selectedStore && (
             <button
               onClick={() => setCurrentTab("catalog")}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-3 border ${
                 currentTab === "catalog"
-                  ? "bg-blue-500 text-white"
-                  : "bg-transparent text-white/70 hover:text-white"
+                  ? "bg-blue-500 text-white border-blue-400"
+                  : "bg-transparent text-white/70 hover:text-white border-white/30"
               }`}
             >
+              <Grid className="w-4 h-4" />
               Catalog
             </button>
           )}
           <button
             onClick={() => setCurrentTab("cart")}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all relative ${
+            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 border relative ${
               currentTab === "cart"
-                ? "bg-blue-500 text-white"
-                : "bg-transparent text-white/70 hover:text-white"
+                ? "bg-blue-500 text-white border-blue-400"
+                : "bg-transparent text-white/70 hover:text-white border-white/30"
             }`}
           >
-            Cart
-            {getCartCount() > 0 && (
-              <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                {getCartCount()}
-              </span>
-            )}
+            <div className="relative flex items-center">
+              <ShoppingCart className="w-5 h-5" />
+              {getCartCount() > 0 && (
+                <span className="absolute -top-3 left-2.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                  {getCartCount()}
+                </span>
+              )}
+            </div>
+            <span className="text-sm">Cart</span>
+          </button>
+          <button
+            onClick={() => setCurrentTab("chat")}
+            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-3 border ${
+              currentTab === "chat"
+                ? "bg-blue-500 text-white border-blue-400"
+                : "bg-transparent text-white/70 hover:text-white border-white/30"
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Chat
           </button>
         </div>
 
@@ -2082,81 +2088,6 @@ export default function HomeScreen() {
               </button>
             </div>
           </>
-        )}
-
-        {/* Small Checkout Button Below Chat */}
-        {currentTab === "chat" && getCartCount() > 0 && selectedStore && (
-          <div className="mt-4">
-            <div
-              className="w-full px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-lg text-white font-semibold transition-all flex flex-col gap-2"
-            >
-              <div className="flex items-center justify-between w-full">
-                <div 
-                  className="flex flex-col items-start flex-1"
-                  title="Payment Method"
-                >
-                  <span className="text-sm">Payment Method</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-white/70 capitalize">
-                      {selectedPaymentMethod === 'card' && '💳 Credit Card'}
-                      {selectedPaymentMethod === 'upi' && '📱 UPI'}
-                      {selectedPaymentMethod === 'cod' && '🚚 Cash on Delivery'}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setShowCheckoutPaymentModal(true);
-                      }}
-                      title="Change Payment Method"
-                      className="p-1 bg-white/10 hover:bg-white/20 rounded-full transition-all flex items-center justify-center"
-                    >
-                      <ChevronDown className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 ml-auto">
-                  <span className="text-lg font-bold text-green-300 whitespace-nowrap">${getTotalPrice()}</span>
-                  <button
-                    onClick={() => {
-                      handleCheckout(selectedStore.id);
-                    }}
-                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg text-white font-bold transition-all flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    Place Order
-                  </button>
-                </div>
-              </div>
-              {/* Fulfillment type selection */}
-              <div className="flex gap-4 mt-2">
-                <label className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="fulfillmentType"
-                    value="delivery"
-                    checked={fulfillmentType === 'delivery'}
-                    onChange={e => { e.stopPropagation(); setFulfillmentType('delivery'); }}
-                  />
-                  <span className="text-xs">Delivery</span>
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="fulfillmentType"
-                    value="pickup"
-                    checked={fulfillmentType === 'pickup'}
-                    onChange={e => { e.stopPropagation(); setFulfillmentType('pickup'); }}
-                  />
-                  <span className="text-xs">Store Pickup</span>
-                </label>
-              </div>
-              {/* Min order info */}
-              {selectedStore && fulfillmentType === 'delivery' && (
-                <div className="text-xs text-yellow-300 mt-2">
-                  Min order $20 to avoid delivery charges
-                </div>
-              )}
-            </div>
-          </div>
         )}
 
         {/* Catalog Tab */}
