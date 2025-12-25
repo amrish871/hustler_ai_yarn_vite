@@ -78,7 +78,8 @@ export default function HomeScreen() {
   const [assistantStep, setAssistantStep] = useState<number>(0);
   const [assistantAnswers, setAssistantAnswers] = useState<Record<string, string>>({});
   const [assistantSuggestions, setAssistantSuggestions] = useState<Array<{store: Store, product: Product}>>([]);
-  const [recommendationQuantities, setRecommendationQuantities] = useState<Record<string, number>>({})
+  const [recommendationQuantities, setRecommendationQuantities] = useState<Record<string, number>>({});
+  const [recentlyVisitedStores, setRecentlyVisitedStores] = useState<Store[]>([]);
   
   // Cart context
   const { setCartCount, setOnCartClick } = useCart();
@@ -1137,17 +1138,26 @@ export default function HomeScreen() {
   };
 
   const handleSelectStore = (store: Store) => {
-    setSelectedStore(store);
+    // Get full store data from stores array
+    const fullStore = stores.find((s) => s.id === store.id) || store;
+    
+    setSelectedStore(fullStore);
     setShowStoreSearch(false);
     setSelectedCategory("All");
     setSelectedBrands(new Set(["All"]));
     setCurrentTab("catalog");
     setMessages([
-      { text: `Welcome to ${store.name}! 🛒`, sender: "ai" },
+      { text: `Welcome to ${fullStore.name}! 🛒`, sender: "ai" },
       { text: `What would you like to order?`, sender: "ai" },
     ]);
     setShowConversation(true);
     setShowCatalog(true);
+    
+    // Track recently visited store with full data
+    setRecentlyVisitedStores((prev) => {
+      const filtered = prev.filter((s) => s.id !== fullStore.id);
+      return [fullStore, ...filtered].slice(0, 5);
+    });
   };
 
   const handleBrowseCatalog = () => setShowCatalog(true);
@@ -1393,6 +1403,71 @@ export default function HomeScreen() {
           >
             Done
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  function RecentOrders() {
+    if (orders.length === 0) return null;
+    
+    return (
+      <div className="w-full mt-6">
+        <h2 className="text-lg font-bold text-white mb-4 px-4">Recent Orders</h2>
+        <div className="flex overflow-x-auto gap-4 px-4 pb-4">
+          {orders.slice(0, 5).map((order) => (
+            <button
+              key={order.id}
+              onClick={() => handleSelectStore(order.store)}
+              className="flex-shrink-0 w-48 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg transition-all p-4 text-left"
+            >
+              <div className="text-3xl mb-2">{order.store.image}</div>
+              <h3 className="font-semibold text-white mb-1 truncate">{order.store.name}</h3>
+              <p className="text-xs text-blue-200 mb-2">{order.date} at {order.time}</p>
+              <div className="mb-2">
+                <p className="text-xs text-gray-300 mb-1">Items: {order.items.length}</p>
+                <div className="flex flex-wrap gap-1">
+                  {order.items.slice(0, 2).map((item, idx) => (
+                    <span key={idx} className="text-xs bg-white/20 text-blue-200 px-2 py-1 rounded">
+                      {item.name.length > 10 ? item.name.substring(0, 10) + '...' : item.name}
+                    </span>
+                  ))}
+                  {order.items.length > 2 && (
+                    <span className="text-xs text-blue-300">+{order.items.length - 2} more</span>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-green-400">${order.total}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function RecentlyVisitedStores() {
+    if (recentlyVisitedStores.length === 0) return null;
+    
+    return (
+      <div className="w-full mt-6">
+        <h2 className="text-lg font-bold text-white mb-4 px-4">Recently Visited Stores</h2>
+        <div className="flex overflow-x-auto gap-4 px-4 pb-4">
+          {recentlyVisitedStores.map((store) => (
+            <button
+              key={store.id}
+              onClick={() => handleSelectStore(store)}
+              className="flex-shrink-0 w-40 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg transition-all p-4 text-center"
+            >
+              <div className="text-4xl mb-2">{store.image}</div>
+              <h3 className="font-semibold text-white mb-1 truncate">{store.name}</h3>
+              <p className="text-xs text-blue-200 mb-2">{store.category}</p>
+              <div className="flex items-center justify-center gap-1 mb-2">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-semibold text-white">{store.rating}</span>
+              </div>
+              <p className="text-xs text-blue-300">{store.distance}</p>
+            </button>
+          ))}
         </div>
       </div>
     );
@@ -2488,6 +2563,18 @@ export default function HomeScreen() {
               {showCatalog && selectedStore && !showConversation && <Catalog />}
             </div>
           </div>
+
+          {/* Recently Visited Stores - Outside the main card */}
+          {!showConversation &&
+            !showStoreSearch &&
+            !selectedStore &&
+            !showCatalog && <RecentlyVisitedStores />}
+
+          {/* Recent Orders - Outside the main card */}
+          {!showConversation &&
+            !showStoreSearch &&
+            !selectedStore &&
+            !showCatalog && <RecentOrders />}
         </div>
       </div>
     </div>
