@@ -21,6 +21,9 @@ import { useCart } from "../context/CartContext";
 import CheckoutPage from "../components/CheckoutPage";
 import HeroCarousel from "../components/HeroCarousel";
 import ChatPanel from "../components/ChatPanel";
+import AddressModal from "../components/AddressModal";
+import { Catalog } from "../components/Catalog";
+import CheckoutPaymentModal from "../components/CheckoutPaymentModal";
 
 type Message = {
   text?: string;
@@ -1316,99 +1319,7 @@ export default function HomeScreen() {
     );
   }
 
-  function AddressModal() {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-        <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">Select Delivery Address</h2>
-            <button
-              onClick={() => setShowAddressModal(false)}
-              className="text-white/70 hover:text-white text-2xl"
-            >
-              ✕
-            </button>
-          </div>
 
-          <div className="space-y-3 mb-6">
-            {addresses.map((addr) => (
-              <button
-                key={addr.id}
-                onClick={() => {
-                  setDeliveryAddress(addr.address);
-                  setShowAddressModal(false);
-                }}
-                className={`w-full p-4 rounded-lg text-left transition-all ${
-                  deliveryAddress === addr.address
-                    ? "bg-blue-500/40 border-2 border-blue-400"
-                    : "bg-white/10 border-2 border-transparent hover:bg-white/20"
-                }`}
-              >
-                <p className="text-white font-semibold mb-1">{addr.label}</p>
-                <p className="text-white/70 text-sm">{addr.address}</p>
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setShowAddressModal(false)}
-            className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all font-semibold"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  function CheckoutPaymentModal() {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-        <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">Select Payment Method</h2>
-            <button
-              onClick={() => setShowCheckoutPaymentModal(false)}
-              className="text-white/70 hover:text-white text-2xl"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-3 mb-6">
-            {[
-              { label: '💳 Card', value: 'card', description: 'Credit or Debit Card' },
-              { label: '📱 UPI', value: 'upi', description: 'Google Pay, PhonePe, Paytm' },
-              { label: '🚚 COD', value: 'cod', description: 'Cash on Delivery' },
-            ].map((method) => (
-              <button
-                key={method.value}
-                onClick={() => {
-                  setSelectedPaymentMethod(method.value);
-                  setShowCheckoutPaymentModal(false);
-                }}
-                className={`w-full p-4 rounded-lg text-left transition-all ${
-                  selectedPaymentMethod === method.value
-                    ? "bg-blue-500/40 border-2 border-blue-400"
-                    : "bg-white/10 border-2 border-transparent hover:bg-white/20"
-                }`}
-              >
-                <p className="text-white font-semibold mb-1">{method.label}</p>
-                <p className="text-white/70 text-sm">{method.description}</p>
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setShowCheckoutPaymentModal(false)}
-            className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all font-semibold"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   function RecentOrders() {
     if (orders.length === 0) return null;
@@ -1548,123 +1459,26 @@ export default function HomeScreen() {
     );
   }
 
-  function Catalog() {
-    const paymentMethods = [
-      { label: "💳 Credit Card", value: "card" },
-      { label: "📱 UPI", value: "upi" },
-      { label: "🚚 Cash on Delivery", value: "cod" },
-    ];
-
-    return (
-      <div className="w-full mt-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowCatalog(false)}
-              className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center"
-            >
-              <ArrowLeft className="w-4 h-4 text-white" />
-            </button>
-            <h3 className="text-xl font-semibold text-white">Catalog</h3>
-          </div>
-          <button
-            onClick={() => {
-              setShowCatalog(false);
-              setSelectedStore(null);
-            }}
-            className="text-white/70 hover:text-white"
-          >
-            ✕
-          </button>
-        </div>
-
-        {getCartCount() > 0 && (
-          <div className="bg-green-500/20 rounded-xl p-3 mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-green-300" />
-              <span className="text-white font-semibold">
-                {getCartCount()} items
-              </span>
-            </div>
-            <span className="text-white font-bold text-lg">
-              ${getTotalPrice()}
-            </span>
-          </div>
-        )}
-
-        <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto space-y-2">
-          {selectedStore && selectedStore.catalog.map((item) => {
-            const cartItem = cart.find(
-              (c) => c.id === item.id && c.storeId === selectedStore.id
-            );
-            const quantity = cartItem ? cartItem.quantity : 0;
-
-            return (
-              <div
-                key={item.id}
-                className="bg-white/10 rounded-xl p-3 flex items-center gap-3"
-              >
-                <div className="text-3xl">{item.image}</div>
-                <div className="flex-1">
-                  <h4 className="text-white font-semibold text-sm">
-                    {item.name}
-                  </h4>
-                  <p className="text-blue-200 text-xs">{item.category}</p>
-                  <p className="text-green-300 font-bold text-sm">
-                    ${item.price}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {quantity > 0 ? (
-                    <>
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="w-8 h-8 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
-                      >
-                        <Minus className="w-4 h-4 text-white" />
-                      </button>
-                      <span className="text-white font-semibold w-6 text-center">
-                        {quantity}
-                      </span>
-                      <button
-                        onClick={() => addToCart(item)}
-                        className="w-8 h-8 bg-green-500/30 hover:bg-green-500/50 rounded-full flex items-center justify-center"
-                      >
-                        <Plus className="w-4 h-4 text-white" />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => addToCart(item)}
-                      className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-full text-white text-sm font-semibold"
-                    >
-                      Add
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {getCartCount() > 0 && (
-          <button 
-            onClick={() => setShowCheckout(true)}
-            className="w-full mt-3 py-3 bg-green-500 hover:bg-green-600 rounded-full text-white font-bold"
-          >
-            Checkout
-          </button>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
 
       {orderPlaced && <OrderConfirmation />}
-      {showAddressModal && <AddressModal />}
-      {showCheckoutPaymentModal && <CheckoutPaymentModal />}
+      {showAddressModal && (
+        <AddressModal
+          addresses={addresses}
+          deliveryAddress={deliveryAddress}
+          setDeliveryAddress={setDeliveryAddress}
+          setShowAddressModal={setShowAddressModal}
+        />
+      )}
+      {showCheckoutPaymentModal && (
+        <CheckoutPaymentModal
+          selectedPaymentMethod={selectedPaymentMethod}
+          setSelectedPaymentMethod={setSelectedPaymentMethod}
+          setShowCheckoutPaymentModal={setShowCheckoutPaymentModal}
+        />
+      )}
       
       {showCheckout && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
@@ -1792,7 +1606,20 @@ export default function HomeScreen() {
                 />
               )}
 
-              {showCatalog && selectedStore && !showConversation && <Catalog />}
+              {showCatalog && selectedStore && !showConversation && (
+                <Catalog
+                  store={selectedStore}
+                  cartCount={cart.filter((c) => c.storeId === selectedStore.id).reduce((sum, item) => sum + item.quantity, 0)}
+                  total={parseFloat(getTotalPrice(selectedStore.id))}
+                  onAdd={(product) => addToCart(product)}
+                  onRemove={(id) => removeFromCart(id, selectedStore.id)}
+                  onCheckout={() => setShowCheckout(true)}
+                  getQuantity={(productId) => {
+                    const item = cart.find((c) => c.id === productId && c.storeId === selectedStore.id);
+                    return item ? item.quantity : 0;
+                  }}
+                />
+              )}
             </div>
           </div>
 
