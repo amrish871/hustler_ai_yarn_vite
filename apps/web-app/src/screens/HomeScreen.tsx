@@ -26,6 +26,8 @@ import { Catalog } from "../components/Catalog";
 import CheckoutPaymentModal from "../components/CheckoutPaymentModal";
 
 import StoreSearch from "../components/StoreSearch";
+import OrderConfirmation from "../components/OrderConfirmation";
+import RecentlyVisitedStores from "../components/RecentlyVisitedStores";
 import RecentOrders from "../components/RecentOrders";
 type Message = {
   text?: string;
@@ -1290,67 +1292,10 @@ export default function HomeScreen() {
     }
   };
 
-  function OrderConfirmation() {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Order Placed!</h2>
-          <p className="text-blue-200 mb-6">Your order has been confirmed. Thank you for your purchase!</p>
-          <div className="bg-white/10 rounded-lg p-4">
-            <p className="text-white/70 text-sm mb-2">Payment Method</p>
-            <p className="text-white font-semibold capitalize mb-4">{selectedPaymentMethod}</p>
-            <p className="text-white/70 text-sm mb-2">Total Amount</p>
-            <p className="text-2xl font-bold text-green-300">${getTotalPrice()}</p>
-          </div>
-          <button
-            onClick={() => {
-              saveOrder();
-              setOrderPlaced(false);
-              setShowConversation(false);
-              setShowCatalog(false);
-              setSelectedStore(null);
-              setCart([]);
-            }}
-            className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  }
 
 
 
 
-  function RecentlyVisitedStores() {
-    if (recentlyVisitedStores.length === 0) return null;
-    
-    return (
-      <div className="w-full mt-6">
-        <h2 className="text-lg font-bold text-white mb-4 px-4">Recently Visited Stores</h2>
-        <div className="flex overflow-x-auto gap-4 px-4 pb-4">
-          {recentlyVisitedStores.map((store) => (
-            <button
-              key={store.id}
-              onClick={() => handleSelectStore(store)}
-              className="flex-shrink-0 w-40 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg shadow-md hover:shadow-lg transition-all p-4 text-center"
-            >
-              <div className="text-4xl mb-2">{store.image}</div>
-              <h3 className="font-semibold text-white mb-1 truncate">{store.name}</h3>
-              <p className="text-xs text-blue-200 mb-2">{store.category}</p>
-              <div className="flex items-center justify-center gap-1 mb-2">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-semibold text-white">{store.rating}</span>
-              </div>
-              <p className="text-xs text-blue-300">{store.distance}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
   // carouselRef, carouselIndex, carouselSlides, getCartCount(), 
   // isListening, toggleListening, setShowConversation, setShowMediaOptions
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -1361,7 +1306,20 @@ export default function HomeScreen() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
 
-      {orderPlaced && <OrderConfirmation />}
+      {orderPlaced && (
+        <OrderConfirmation
+          selectedPaymentMethod={selectedPaymentMethod}
+          getTotalPrice={getTotalPrice}
+          onDone={() => {
+            saveOrder();
+            setOrderPlaced(false);
+            setShowConversation(false);
+            setShowCatalog(false);
+            setSelectedStore(null);
+            setCart([]);
+          }}
+        />
+      )}
       {showAddressModal && (
         <AddressModal
           addresses={addresses}
@@ -1534,7 +1492,12 @@ export default function HomeScreen() {
           {!showConversation &&
             !showStoreSearch &&
             !selectedStore &&
-            !showCatalog && <RecentlyVisitedStores />}
+            !showCatalog && (
+              <RecentlyVisitedStores
+                recentlyVisitedStores={recentlyVisitedStores}
+                handleSelectStore={handleSelectStore}
+              />
+            )}
 
           {/* Recent Orders - Outside the main card */}
           {!showConversation &&
