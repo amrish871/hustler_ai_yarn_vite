@@ -7,7 +7,7 @@ import { useLogin } from '../../hooks/userLoginQuery'
 const Login = ({ language = 'en' }: { language?: Language }) => {
 
   const { mutate } = useLogin();
-  const {isLoading, isError, error, data} = useAuth()
+  
   const navigate = useNavigate()
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
