@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.json",
   "include": [
     "src"
-  ]
+, "../web-app/hooks/userLoginQuery.ts"  ]
 }

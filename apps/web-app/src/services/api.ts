@@ -1,4 +1,4 @@
-import { createApiInstance, createApiService } from '@myorg/api';
+import { createApiInstance, createApiService } from 'packages/shared-api/src';
 
 // Create API instance with configuration
 const api = createApiInstance(

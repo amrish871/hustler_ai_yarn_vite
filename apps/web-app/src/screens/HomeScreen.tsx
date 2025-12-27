@@ -1,22 +1,5 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import {
-  Mic,
-  MessageSquare,
-  Send,
-  Camera,
-  Image,
-  Store,
-  Search,
-  MapPin,
-  Star,
-  Plus,
-  Minus,
-  ShoppingCart,
-  ArrowLeft,
-  Package,
-  ChevronDown,
-  Grid,
-} from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Store, MapPin } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import CheckoutPage from "../components/CheckoutPage";
 import HeroCarousel from "../components/HeroCarousel";
@@ -56,6 +39,10 @@ type Product = {
 };
 type CartItem = Omit<Product, 'quantity'> & { quantity: number; storeId: number };
 export default function HomeScreen() {
+
+  const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
+  const [deliveryAddress, setDeliveryAddress] = useState<string>("123 Main Street, Apt 4B, New York, NY 10001");
+
   const [storeProductSuggestions, setStoreProductSuggestions] = useState<{store: Store, product: Product}[]>([]);
   const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('delivery');
   const [showConversation, setShowConversation] = useState<boolean>(false);
@@ -77,8 +64,8 @@ export default function HomeScreen() {
   const [showCheckoutPaymentModal, setShowCheckoutPaymentModal] = useState<boolean>(false);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [orderPlaced, setOrderPlaced] = useState<boolean>(false);
-  const [deliveryAddress, setDeliveryAddress] = useState<string>("123 Main Street, Apt 4B, New York, NY 10001");
-  const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
+  
+  
   const [currentTab, setCurrentTab] = useState<"chat" | "catalog" | "cart">("chat");
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
@@ -1306,6 +1293,7 @@ export default function HomeScreen() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
 
+      {/* Start show Order Confirmation when order is placed */}
       {orderPlaced && (
         <OrderConfirmation
           selectedPaymentMethod={selectedPaymentMethod}
@@ -1320,6 +1308,9 @@ export default function HomeScreen() {
           }}
         />
       )}
+      {/* End show Order Confirmation when order is placed */}
+
+      {/* Start show Address Modal When Address needs to change */}
       {showAddressModal && (
         <AddressModal
           addresses={addresses}
@@ -1328,6 +1319,9 @@ export default function HomeScreen() {
           setShowAddressModal={setShowAddressModal}
         />
       )}
+      {/* End show Address Modal When Address needs to change */}
+
+      {/* Start show Payment Modal when payment method is Card/UPI */}
       {showCheckoutPaymentModal && (
         <CheckoutPaymentModal
           selectedPaymentMethod={selectedPaymentMethod}
@@ -1335,7 +1329,9 @@ export default function HomeScreen() {
           setShowCheckoutPaymentModal={setShowCheckoutPaymentModal}
         />
       )}
-      
+      {/* End show Payment Modal when payment method is Card/UPI */}  
+
+      {/* Start show Checkout Modal */}
       {showCheckout && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-2xl max-w-4xl w-full shadow-2xl border border-white/20 max-h-[90vh] overflow-y-auto flex flex-col">
@@ -1362,9 +1358,11 @@ export default function HomeScreen() {
           </div>
         </div>
       )}
+      {/* End show Checkout Modal */}
       
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
         <div className="w-full max-w-4xl">
+          {/* Start Header with delivery address */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">
               Voice AI Assistant
@@ -1378,10 +1376,12 @@ export default function HomeScreen() {
               <p className="text-white/90 text-sm">{deliveryAddress}</p>
             </button>
           </div>
-
+          {/* End Header with delivery address */}
+          
+          {/* Main Card */}
           <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center">
-              {/* Carousel for Order Grocery / Medicines */}
+              {/* Carousel for Order Grocery / Medicines etc */}
               {!showConversation &&
                 !showStoreSearch &&
                 !selectedStore &&
@@ -1390,7 +1390,6 @@ export default function HomeScreen() {
                   carouselSlides={carouselSlides}
                   carouselIndex={carouselIndex}
                   setCarouselIndex={setCarouselIndex}
-                  getCartCount={getCartCount}
                   isListening={isListening}
                   toggleListening={toggleListening}
                   setShowConversation={setShowConversation}
@@ -1399,12 +1398,11 @@ export default function HomeScreen() {
                   showMediaOptions={showMediaOptions}
                   fileInputRef={fileInputRef}
                   cameraInputRef={cameraInputRef}
-                  setShowCatalog={setShowCatalog}
                   onTouchStart={onTouchStart}
                   onTouchEnd={onTouchEnd}
                 />
               )}
-
+              {/* Start show store search when the user click on browse button */}
               {showStoreSearch && !selectedStore && (
                 <StoreSearch
                   storeSearchQuery={storeSearchQuery}
@@ -1414,7 +1412,7 @@ export default function HomeScreen() {
                   setShowStoreSearch={setShowStoreSearch}
                 />
               )}
-              
+              {/* End show store search when the user click on browse button */}
 
               {showConversation && (
                 <ChatPanel
@@ -1474,11 +1472,8 @@ export default function HomeScreen() {
               {showCatalog && selectedStore && !showConversation && (
                 <Catalog
                   store={selectedStore}
-                  cartCount={cart.filter((c) => c.storeId === selectedStore.id).reduce((sum, item) => sum + item.quantity, 0)}
-                  total={parseFloat(getTotalPrice(selectedStore.id))}
                   onAdd={(product) => addToCart(product)}
                   onRemove={(id) => removeFromCart(id, selectedStore.id)}
-                  onCheckout={() => setShowCheckout(true)}
                   getQuantity={(productId) => {
                     const item = cart.find((c) => c.id === productId && c.storeId === selectedStore.id);
                     return item ? item.quantity : 0;

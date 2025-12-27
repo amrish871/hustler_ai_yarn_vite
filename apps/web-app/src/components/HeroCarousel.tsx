@@ -12,7 +12,6 @@ type HeroCarouselProps = {
   }>;
   carouselIndex: number;
   setCarouselIndex: (index: number) => void;
-  getCartCount: () => number;
   isListening: boolean;
   toggleListening: () => void;
   setShowConversation: (show: boolean) => void;
@@ -21,7 +20,6 @@ type HeroCarouselProps = {
   showMediaOptions: boolean;
   fileInputRef: React.RefObject<HTMLInputElement>;
   cameraInputRef: React.RefObject<HTMLInputElement>;
-  setShowCatalog: (show: boolean) => void;
   onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
   onTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
 };
@@ -30,7 +28,6 @@ export default function HeroCarousel({
   carouselSlides,
   carouselIndex,
   setCarouselIndex,
-  getCartCount,
   isListening,
   toggleListening,
   setShowConversation,
@@ -39,7 +36,6 @@ export default function HeroCarousel({
   showMediaOptions,
   fileInputRef,
   cameraInputRef,
-  setShowCatalog,
   onTouchStart,
   onTouchEnd,
 }: HeroCarouselProps) {
@@ -68,22 +64,6 @@ export default function HeroCarousel({
               key={slide.id}
               className={`min-w-full p-8 bg-gradient-to-br ${slide.color} rounded-3xl relative`}
             >
-              {/* Cart Icon - Top Left */}
-              {getCartCount() > 0 && (
-                <button
-                  onClick={() => setShowCatalog(true)}
-                  className="absolute top-4 left-4 z-20"
-                  style={{ pointerEvents: "auto" }}
-                >
-                  <div className="relative">
-                    <ShoppingCart className="w-8 h-8 text-white" />
-                    <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                      {getCartCount()}
-                    </span>
-                  </div>
-                </button>
-              )}
-
               <div className="flex flex-col items-center text-center w-full">
                 <div className="text-6xl mb-4">{slide.emoji}</div>
                 <h3 className="text-2xl font-bold text-white mb-2">

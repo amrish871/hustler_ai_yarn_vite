@@ -15,8 +15,8 @@
       "@myorg/utils": [
         "packages/utils/src"
       ],
-      "@myorg/api": [
-        "packages/api/src"
+      "@myorg/shared-api": [
+        "packages/shared-api/src"
       ],
       "@myorg/auth": [
         "packages/auth/src"

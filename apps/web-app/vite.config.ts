@@ -10,7 +10,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@myorg/ui': path.resolve(__dirname, '../../packages/ui/src'),
-      '@myorg/utils': path.resolve(__dirname, '../../packages/utils/src')
+      '@myorg/utils': path.resolve(__dirname, '../../packages/utils/src'),
+      '@myorg/shared-api': path.resolve(__dirname, '../../packages/shared-api/src')
     }
   },
   server: { 

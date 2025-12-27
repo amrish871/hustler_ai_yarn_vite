@@ -1,9 +1,13 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Language, t } from '../translations'
+import { useLogin } from '../../hooks/userLoginQuery'
 
 
 const Login = ({ language = 'en' }: { language?: Language }) => {
+
+  const { mutate } = useLogin();
+  const {isLoading, isError, error, data} = useAuth()
   const navigate = useNavigate()
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
@@ -25,19 +29,56 @@ const Login = ({ language = 'en' }: { language?: Language }) => {
     return digits.length === 10
   }
 
+  // const handleSendOtp = () => {
+  //   setError(null)
+  //   if (!validatePhone(phone)) {
+  //     setError(t(language, 'invalid_phone'))
+  //     return
+  //   }
+  //   const code = Math.floor(100000 + Math.random() * 900000).toString()
+  //   setSentOtp(code)
+  //   setStage('otp')
+  //   setTimer(60)
+  //   // eslint-disable-next-line no-alert
+  //   alert(`${t(language, 'otp_sent')}: ${code}`)
+  // }
+
+  
   const handleSendOtp = () => {
-    setError(null)
+    setError(null);
     if (!validatePhone(phone)) {
-      setError(t(language, 'invalid_phone'))
-      return
+      setError(t(language, 'invalid_phone'));
+      return;
     }
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    setSentOtp(code)
-    setStage('otp')
-    setTimer(60)
-    // eslint-disable-next-line no-alert
-    alert(`${t(language, 'otp_sent')}: ${code}`)
-  }
+    // mutate is used to call the sendOtp function from the userLoginQuery hook
+    // It will send the OTP to the provided phone number
+    // and handle success and error cases
+    // The onSuccess callback will navigate to the OtpVerification screen
+    // The onError callback will log the error to the console
+    // await sendOtp(phoneNumber); // Call the sendOtp function from the userLoginQuery
+    // This will send the OTP to the provided phone number
+    // and handle success and error cases
+    // The onSuccess callback will navigate to the OtpVerification screen
+    // The onError callback will log the error to the console
+    (async () => {
+      mutate(
+        phone, // Payload
+        {
+          onSuccess: data => {
+            console.log('OTP sent successfully!', data);
+            // Navigate to OtpVerification screen
+            // navigation.navigate('OtpVerification', {
+            //   phoneNumber: phoneNumber,
+            // });
+          },
+          onError: error => {
+            // Handle error, e.g., show an alert
+            console.error('Error sending OTP:', error);
+          },
+        },
+      );
+    })();
+  };
 
   const handleVerifyOtp = () => {
     setError(null)
