@@ -19,3 +19,6 @@ export const API_SET_DEFAULT_USER_ADDRESSES  = "/api/v1/default-user-address/"
 
 
 export const AUTH_BYPASS_URLS = [API_REQUEST_LOGIN_OTP, API_VERIFY_LOGIN_OTP]
+
+// categories
+export const API_CATEGORIES = "/api/v1/categories/"

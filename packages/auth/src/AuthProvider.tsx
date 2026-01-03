@@ -8,6 +8,8 @@ export interface AuthContextType {
   login: (token: string) => void;
   logout: () => void;
   setToken: (token: string | null) => void;
+  setUser: (user: any) => void;
+  getUser: () => any;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

@@ -16,7 +16,7 @@ export const useVerifyLoginOTP = () => {
   // const mutationFn: MutationFunction<any, { mobile: string; otp: string }> = ({ mobile, otp }) => verifyOtp(mobile, otp);
 
   return useMutation({
-    mutationFn: (variables: {mobile: string; otp: string}) =>verifyOtp(variables.mobile, variables.otp),
+    mutationFn: (variables: {phone: string; otp: string}) =>verifyOtp(variables.phone, variables.otp),
     onSuccess: () => {
         // queryClient.invalidateQueries({ queryKey: ['userAddresses'] });
     },

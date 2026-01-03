@@ -67,7 +67,9 @@ export const createApiInstance = (
 
       // Get token from localStorage or your auth state management
       // Default storage key used by AuthProvider is 'authToken'
-      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('authToken') : null;
+      // const token = typeof localStorage !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNSIsImV4cCI6MTc4NDYzNzU2NCwicm9sZXMiOlsidXNlciJdfQ.WPGlqV3ORzduJYViGHWgCOZmUSQXdv-uMDow1uBk4Fw';
+      
       if (token) {
         if (!reqConfig.headers) reqConfig.headers = {} as any;
         reqConfig.headers.Authorization = `Bearer ${token}`;

@@ -12,6 +12,7 @@ import StoreSearch from "../components/StoreSearch";
 import OrderConfirmation from "../components/OrderConfirmation";
 import RecentlyVisitedStores from "../components/RecentlyVisitedStores";
 import RecentOrders from "../components/RecentOrders";
+import { useFetchCategories } from "../../hooks/useCategoryQuery";
 type Message = {
   text?: string;
   image?: string | null;
@@ -39,6 +40,8 @@ type Product = {
 };
 type CartItem = Omit<Product, 'quantity'> & { quantity: number; storeId: number };
 export default function HomeScreen() {
+
+  const { data: categories, isLoading: categoriesLoading } = useFetchCategories();
 
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
   const [deliveryAddress, setDeliveryAddress] = useState<string>("123 Main Street, Apt 4B, New York, NY 10001");
@@ -92,29 +95,30 @@ export default function HomeScreen() {
   
   const touchStartX = useRef<number | null>(null);
 
-  const carouselSlides = [
-    {
-      id: 1,
-      title: "Order Grocery",
-      emoji: "🛒",
-      description: "Browse nearby stores",
-      color: "from-green-500/20 to-emerald-600/20",
-    },
-    {
-      id: 2,
-      title: "Order Medicines",
-      emoji: "💊",
-      description: "Get medicines delivered",
-      color: "from-indigo-500/20 to-purple-600/20",
-    },
-    {
-      id: 3,
-      title: "Order Food",
-      emoji: "🍕",
-      description: "Food delivery from restaurants",
-      color: "from-orange-500/20 to-red-600/20",
-    },
-  ];
+  const carouselSlides = categoriesLoading ? [] : categories
+  // [
+  //   {
+  //     id: 1,
+  //     title: "Order Grocery",
+  //     emoji: "🛒",
+  //     description: "Browse nearby stores",
+  //     color: "from-green-500/20 to-emerald-600/20",
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "Order Medicines",
+  //     emoji: "💊",
+  //     description: "Get medicines delivered",
+  //     color: "from-indigo-500/20 to-purple-600/20",
+  //   },
+  //   {
+  //     id: 3,
+  //     title: "Order Food",
+  //     emoji: "🍕",
+  //     description: "Food delivery from restaurants",
+  //     color: "from-orange-500/20 to-red-600/20",
+  //   },
+  // ];
 
   const goPrev = () =>
     setCarouselIndex(
@@ -1288,7 +1292,9 @@ export default function HomeScreen() {
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
 
-
+  useEffect(() => {
+    console.log("data loaded", categories)
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">

@@ -6,7 +6,7 @@ type HeroCarouselProps = {
   carouselSlides: Array<{
     id: number;
     title: string;
-    emoji: string;
+    image: string;
     description: string;
     color: string;
   }>;
@@ -65,7 +65,7 @@ export default function HeroCarousel({
               className={`min-w-full p-8 bg-gradient-to-br ${slide.color} rounded-3xl relative`}
             >
               <div className="flex flex-col items-center text-center w-full">
-                <div className="text-6xl mb-4">{slide.emoji}</div>
+                <div className="text-6xl mb-4">{slide.image}</div>
                 <h3 className="text-2xl font-bold text-white mb-2">
                   {slide.title}
                 </h3>

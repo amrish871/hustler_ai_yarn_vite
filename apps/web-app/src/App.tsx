@@ -3,13 +3,17 @@ import Navbar from './components/Navbar'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { CartProvider, useCart } from './context/CartContext'
+import { AuthLayout } from './components/AuthLayout'
 import Login from './screens/Login'
-import { Language } from './translations'
+import { Language, t } from './translations'
 import HomeScreen from './screens/HomeScreen'
 import AddressManagement from './screens/AddressManagement'
 import Orders from './screens/Orders'
 import Transactions from './screens/Transactions'
 import Subscriptions from './screens/Subscriptions'
+import { AuthProvider } from '@myorg/auth'
+import queryClient from '../src/queries/queryClient'
+import { QueryClientProvider } from '@tanstack/react-query'
 
 
 
@@ -41,8 +45,8 @@ const ProtectedLayout = ({ children, language, onLanguageChange }: { children: R
 const AppContent = ({ language, onLanguageChange }: { language: Language; onLanguageChange: (lang: Language) => void }) => {
   return (
     <Routes>
-      <Route path="/" element={<Login language={language} />} />
-      <Route path="/login" element={<Login language={language} />} />
+      <Route path="/" element={<AuthLayout title={t(language, 'login')} subtitle={t(language, 'login_subtitle')}><Login language={language} /></AuthLayout>} />
+      <Route path="/login" element={<AuthLayout title={t(language, 'login')} subtitle={t(language, 'login_subtitle')}><Login language={language} /></AuthLayout>} />
       <Route path="/home" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><HomeScreen /></ProtectedLayout></ProtectedRoute>} />
       <Route path="/manage-addresses" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><AddressManagement language={language} /></ProtectedLayout></ProtectedRoute>} />
       <Route path="/orders" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><Orders /></ProtectedLayout></ProtectedRoute>} />
@@ -57,11 +61,16 @@ const App = () => {
   const [language, setLanguage] = useState<Language>('en')
 
   return (
-    <CartProvider>
-      <Router>
-        <AppContent language={language} onLanguageChange={setLanguage} />
-      </Router>
-    </CartProvider>
+
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <CartProvider>
+          <Router>
+            <AppContent language={language} onLanguageChange={setLanguage} />
+          </Router>
+        </CartProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   )
 }
 

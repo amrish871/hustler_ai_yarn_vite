@@ -1,13 +1,15 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Language, t } from '../translations'
-import { useLogin } from '../../hooks/userLoginQuery'
+import { useLogin, useVerifyLoginOTP } from '../../hooks/userLoginQuery'
+import { useAuth } from '@myorg/auth'
 
 
 const Login = ({ language = 'en' }: { language?: Language }) => {
 
-  const { mutate } = useLogin();
-  
+  const { mutate: sendOtp } = useLogin();
+  const { mutate: verifyOtp } = useVerifyLoginOTP();
+  const { login, setUser } = useAuth()  
   const navigate = useNavigate()
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
@@ -45,10 +47,10 @@ const Login = ({ language = 'en' }: { language?: Language }) => {
 
   
   const handleSendOtp = () => {
-    setError(null);
+    setError(null)
     if (!validatePhone(phone)) {
-      setError(t(language, 'invalid_phone'));
-      return;
+      setError(t(language, 'invalid_phone'))
+      return
     }
     // mutate is used to call the sendOtp function from the userLoginQuery hook
     // It will send the OTP to the provided phone number
@@ -61,23 +63,21 @@ const Login = ({ language = 'en' }: { language?: Language }) => {
     // The onSuccess callback will navigate to the OtpVerification screen
     // The onError callback will log the error to the console
     (async () => {
-      mutate(
+      sendOtp(
         phone, // Payload
         {
           onSuccess: data => {
-            console.log('OTP sent successfully!', data);
-            // Navigate to OtpVerification screen
-            // navigation.navigate('OtpVerification', {
-            //   phoneNumber: phoneNumber,
-            // });
+            console.log('OTP sent successfully!', data)
           },
           onError: error => {
             // Handle error, e.g., show an alert
-            console.error('Error sending OTP:', error);
+            console.error('Error sending OTP:', error)
           },
         },
-      );
-    })();
+      )
+    })()
+    setStage('otp')
+    setTimer(60)
   };
 
   const handleVerifyOtp = () => {
@@ -86,6 +86,20 @@ const Login = ({ language = 'en' }: { language?: Language }) => {
       setError(t(language, 'invalid_otp'))
       return
     }
+    (async () => {
+      verifyOtp(
+        { phone, otp }, // Payload
+        {
+          onSuccess: data => {
+            console.log('OTP verified successfully!', data)
+          },
+          onError: error => {
+            // Handle error, e.g., show an alert
+            console.error('Error verifying OTP:', error)
+          },
+        },
+      )
+    })()
     setStage('done')
     const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     localStorage.setItem('voiceAI_authToken', token)
@@ -98,80 +112,75 @@ const Login = ({ language = 'en' }: { language?: Language }) => {
   }
 
   return (
-    <div className="min-h-screen p-6 flex items-center justify-center bg-gradient-to-br from-purple-900 via-slate-900 to-blue-500">
-      <div className="w-full max-w-md bg-white/5 backdrop-blur-lg rounded-3xl p-6 shadow-2xl">
-        <h2 className="text-xl font-semibold text-white mb-2">{t(language, 'login')}</h2>
-        <p className="text-sm text-blue-200 mb-4">{t(language, 'login_subtitle')}</p>
+    <>
+      {stage === 'phone' && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm text-white/90">{t(language, 'phone_number')}</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
+              placeholder={t(language, 'enter_phone')}
+              inputMode="tel"
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+            {error && <span className="text-sm text-red-400">{error}</span>}
+          </div>
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleSendOtp}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
+            >
+              {t(language, 'send_otp')}
+            </button>
+          </div>
+        </div>
+      )}
 
-        {stage === 'phone' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-white/90">{t(language, 'phone_number')}</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
-                placeholder={t(language, 'enter_phone')}
-                inputMode="tel"
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              />
-              {error && <span className="text-sm text-red-400">{error}</span>}
-            </div>
-            <div className="flex justify-end mt-2">
+      {stage === 'otp' && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm text-white/90">{t(language, 'enter_otp')}</label>
+            <input
+              type="text"
+              value={otp}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setOtp(e.target.value)}
+              placeholder={t(language, 'enter_otp_placeholder')}
+              inputMode="numeric"
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+            {error && <span className="text-sm text-red-400">{error}</span>}
+          </div>
+
+          <div className="flex items-center justify-between mt-2">
+            <div className="text-white/80 text-sm">{t(language, 'didnt_receive')}</div>
+            <div className="flex gap-2 items-center">
               <button
-                onClick={handleSendOtp}
+                onClick={handleResend}
+                disabled={timer > 0}
+                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {timer>0 ? `${t(language,'resend_in')} ${timer}s` : t(language,'resend_otp')}
+              </button>
+              <button
+                onClick={handleVerifyOtp}
                 className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
               >
-                {t(language, 'send_otp')}
+                {t(language, 'verify')}
               </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {stage === 'otp' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-white/90">{t(language, 'enter_otp')}</label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setOtp(e.target.value)}
-                placeholder={t(language, 'enter_otp_placeholder')}
-                inputMode="numeric"
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              />
-              {error && <span className="text-sm text-red-400">{error}</span>}
-            </div>
-
-            <div className="flex items-center justify-between mt-2">
-              <div className="text-white/80 text-sm">{t(language, 'didnt_receive')}</div>
-              <div className="flex gap-2 items-center">
-                <button
-                  onClick={handleResend}
-                  disabled={timer > 0}
-                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {timer>0 ? `${t(language,'resend_in')} ${timer}s` : t(language,'resend_otp')}
-                </button>
-                <button
-                  onClick={handleVerifyOtp}
-                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
-                >
-                  {t(language, 'verify')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {stage === 'done' && (
-          <div className="text-center py-8">
-            <div className="text-white font-semibold">{t(language, 'welcome')}</div>
-            <div className="text-blue-200 mt-2 text-sm">{t(language, 'login_success')}</div>
-          </div>
-        )}
-      </div>
-    </div>
+      {stage === 'done' && (
+        <div className="text-center py-8">
+          <div className="text-white font-semibold">{t(language, 'welcome')}</div>
+          <div className="text-blue-200 mt-2 text-sm">{t(language, 'login_success')}</div>
+        </div>
+      )}
+    </>
   )
 }
 
