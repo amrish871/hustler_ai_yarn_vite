@@ -2,8 +2,9 @@ import { Store, Product } from '../screens/Home/Home.types';
 import { ProductCard } from './ProductCard';
 
 type Props = {
-  store: Store;
-  onAdd: (p: Product) => void;
+  store: any;
+  catalog?: any[];
+  onAdd: (p: any) => void;
   onRemove: (id: number) => void;
   /** NEW: quantity resolver */
   getQuantity: (productId: number) => number;
@@ -11,14 +12,18 @@ type Props = {
 
 export function Catalog({
   store,
+  catalog = [],
   onAdd,
   onRemove,
   getQuantity
 }: Props) {
+  // Use provided catalog or fall back to store.catalog
+  const products = catalog.length > 0 ? catalog : store.catalog || [];
+  
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
-        {store.catalog.map(product => {
+        {products.map((product: any) => {
           const quantity = getQuantity(product.id);
 
           return (

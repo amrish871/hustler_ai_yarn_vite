@@ -28,7 +28,6 @@ type Store = {
   distance: string;
   image: string;
   popular: string[];
-  catalog: Product[];
 };
 
 type Product = {
@@ -47,6 +46,7 @@ interface ChatPanelProps {
   messages: Message[];
   inputText: string;
   selectedStore: Store | null;
+  catalog?: Product[];
   currentTab: "chat" | "catalog" | "cart";
   cart: CartItem[];
   stores: Store[];
@@ -100,6 +100,7 @@ export default function ChatPanel({
   messages,
   inputText,
   selectedStore,
+  catalog = [],
   currentTab,
   cart,
   stores,
@@ -549,7 +550,7 @@ export default function ChatPanel({
 
           {/* Quick Filters */}
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-            {["All", ...Array.from(new Set(selectedStore.catalog.map((item) => item.category)))].map(
+            {["All", ...Array.from(new Set(catalog.map((item) => item.category)))].map(
               (category) => (
                 <button
                   key={category}
@@ -580,7 +581,7 @@ export default function ChatPanel({
                 {[
                   "All",
                   ...Array.from(
-                    new Set(selectedStore.catalog.map((item) => item.brand).filter(Boolean))
+                    new Set(catalog.map((item) => item.brand).filter(Boolean))
                   ),
                 ].map((brand) => (
                   <label
@@ -621,7 +622,7 @@ export default function ChatPanel({
 
           <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto">
             <div className="grid grid-cols-2 gap-2">
-              {selectedStore.catalog
+              {catalog
                 .filter((item) => {
                   const matchesSearch =
                     item.name.toLowerCase().includes(catalogSearchQuery.toLowerCase()) ||

@@ -28,7 +28,6 @@ type Store = {
   distance: string;
   image: string;
   popular: string[];
-  catalog: Product[];
 };
 type Product = {
   id: number;
@@ -60,6 +59,7 @@ export default function HomeScreen() {
   const [showStoreSearch, setShowStoreSearch] = useState<boolean>(false);
   const [storeSearchQuery, setStoreSearchQuery] = useState<string>("");
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [selectedStoreCatalog, setSelectedStoreCatalog] = useState<Product[]>([]);
   const [showCatalog, setShowCatalog] = useState<boolean>(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>("");
@@ -381,54 +381,6 @@ export default function HomeScreen() {
       distance: "0.3 km",
       image: "🛒",
       popular: ["Milk", "Bread", "Eggs"],
-      catalog: [
-        {
-          id: 1,
-          name: "Whole Milk",
-          brand: "Well",
-          price: 3.99,
-          quantity: "1L",
-          category: "Dairy",
-          image: "🥛",
-        },
-        {
-          id: 2,
-          name: "White Bread",
-          brand: "Golden",
-          price: 2.49,
-          quantity: "500g",
-          category: "Bakery",
-          image: "🍞",
-        },
-        {
-          id: 3,
-          name: "Farm Eggs (12)",
-          brand: "Happy Farm",
-          price: 4.99,
-          quantity: "12 pieces",
-          category: "Dairy",
-          image: "🥚",
-        },
-        {
-          id: 4,
-          name: "Cheddar Cheese",
-          brand: "Kraft",
-          price: 5.99,
-          quantity: "200g",
-          category: "Dairy",
-          image: "🧀",
-        },
-        {
-          id: 5,
-          name: "Bananas",
-          brand: "Fresh",
-          price: 1.99,
-          quantity: "1 bunch",
-          category: "Fruits",
-          image: "🍌",
-        },
-        { id: 6, name: "Apples", brand: "Orchard", price: 3.49, quantity: "1kg", category: "Fruits", image: "🍎" },
-      ],
     },
     {
       id: 2,
@@ -438,54 +390,6 @@ export default function HomeScreen() {
       distance: "0.7 km",
       image: "🥬",
       popular: ["Organic Veggies", "Fruits", "Grains"],
-      catalog: [
-        {
-          id: 1,
-          name: "Organic Spinach",
-          brand: "GreenLeaf",
-          price: 3.99,
-          quantity: "200g",
-          category: "Vegetables",
-          image: "🥬",
-        },
-        {
-          id: 2,
-          name: "Organic Tomatoes",
-          brand: "Nature's Best",
-          price: 4.49,
-          quantity: "500g",
-          category: "Vegetables",
-          image: "🍅",
-        },
-        {
-          id: 3,
-          name: "Organic Carrots",
-          brand: "Farm Fresh",
-          price: 2.99,
-          quantity: "300g",
-          category: "Vegetables",
-          image: "🥕",
-        },
-        {
-          id: 4,
-          name: "Organic Blueberries",
-          brand: "BerryPure",
-          price: 5.99,
-          quantity: "150g",
-          category: "Fruits",
-          image: "🫐",
-        },
-        { id: 5, name: "Quinoa", brand: "NaturalHarvest", price: 6.99, quantity: "400g", category: "Grains", image: "🌾" },
-        {
-          id: 6,
-          name: "Organic Honey",
-          brand: "HoneyGold",
-          price: 8.99,
-          quantity: "500ml",
-          category: "Pantry",
-          image: "🍯",
-        },
-      ],
     },
     {
       id: 3,
@@ -495,63 +399,6 @@ export default function HomeScreen() {
       distance: "0.2 km",
       image: "🏪",
       popular: ["Snacks", "Drinks", "Daily Essentials"],
-      catalog: [
-        {
-          id: 1,
-          name: "Potato Chips",
-          brand: "CrispyBites",
-          price: 2.99,
-          quantity: "150g",
-          category: "Snacks",
-          image: "🥔",
-        },
-        {
-          id: 2,
-          name: "Cola (2L)",
-          brand: "CoolBeverage",
-          price: 2.49,
-          quantity: "2L",
-          category: "Drinks",
-          image: "🥤",
-        },
-        {
-          id: 3,
-          name: "Orange Juice",
-          brand: "FreshPress",
-          price: 3.99,
-          quantity: "1L",
-          category: "Drinks",
-          image: "🍊",
-        },
-        {
-          id: 4,
-          name: "Chocolate Bar",
-          brand: "SweetTreats",
-          price: 1.99,
-          quantity: "50g",
-          category: "Snacks",
-          image: "🍫",
-        },
-        {
-          id: 5,
-          name: "Ice Cream",
-          brand: "FrostyCold",
-          price: 5.49,
-          quantity: "500ml",
-          category: "Frozen",
-          image: "🍦",
-        },
-        { id: 6, name: "Coffee", brand: "BrewMaster", price: 7.99, quantity: "250g", category: "Pantry", image: "☕" },
-        {
-          id: 7,
-          name: "Whole Milk",
-          brand: "Well",
-          price: 1.99,
-          quantity: "1L",
-          category: "Dairy",
-          image: "🥛",
-        },
-      ],
     },
     {
       id: 4,
@@ -561,64 +408,221 @@ export default function HomeScreen() {
       distance: "0.5 km",
       image: "🍕",
       popular: ["Pizza", "Burgers", "Pasta"],
-      catalog: [
-        {
-          id: 1,
-          name: "Margherita Pizza",
-          brand: "Authentic",
-          price: 12.99,
-          quantity: "Large",
-          category: "Pizza",
-          image: "🍕",
-        },
-        {
-          id: 2,
-          name: "Pepperoni Pizza",
-          brand: "Authentic",
-          price: 14.99,
-          quantity: "Large",
-          category: "Pizza",
-          image: "🍕",
-        },
-        {
-          id: 3,
-          name: "Veggie Burger",
-          brand: "HealthyBite",
-          price: 8.99,
-          quantity: "Single",
-          category: "Burgers",
-          image: "🍔",
-        },
-        {
-          id: 4,
-          name: "Classic Burger",
-          brand: "HealthyBite",
-          price: 9.99,
-          quantity: "Single",
-          category: "Burgers",
-          image: "🍔",
-        },
-        {
-          id: 5,
-          name: "Spaghetti Carbonara",
-          brand: "ItalianChef",
-          price: 11.99,
-          quantity: "1 Plate",
-          category: "Pasta",
-          image: "🍝",
-        },
-        {
-          id: 6,
-          name: "Garlic Bread",
-          brand: "FreshBake",
-          price: 4.99,
-          quantity: "6 pieces",
-          category: "Sides",
-          image: "🥖",
-        },
-      ],
     },
   ];
+
+  // Store catalogs mapping
+  const storeCatalogs: { [storeId: number]: Product[] } = {
+    1: [
+      {
+        id: 1,
+        name: "Whole Milk",
+        brand: "Well",
+        price: 3.99,
+        quantity: "1L",
+        category: "Dairy",
+        image: "🥛",
+      },
+      {
+        id: 2,
+        name: "White Bread",
+        brand: "Golden",
+        price: 2.49,
+        quantity: "500g",
+        category: "Bakery",
+        image: "🍞",
+      },
+      {
+        id: 3,
+        name: "Farm Eggs (12)",
+        brand: "Happy Farm",
+        price: 4.99,
+        quantity: "12 pieces",
+        category: "Dairy",
+        image: "🥚",
+      },
+      {
+        id: 4,
+        name: "Cheddar Cheese",
+        brand: "Kraft",
+        price: 5.99,
+        quantity: "200g",
+        category: "Dairy",
+        image: "🧀",
+      },
+      {
+        id: 5,
+        name: "Bananas",
+        brand: "Fresh",
+        price: 1.99,
+        quantity: "1 bunch",
+        category: "Fruits",
+        image: "🍌",
+      },
+      { id: 6, name: "Apples", brand: "Orchard", price: 3.49, quantity: "1kg", category: "Fruits", image: "🍎" },
+    ],
+    2: [
+      {
+        id: 1,
+        name: "Organic Spinach",
+        brand: "GreenLeaf",
+        price: 3.99,
+        quantity: "200g",
+        category: "Vegetables",
+        image: "🥬",
+      },
+      {
+        id: 2,
+        name: "Organic Tomatoes",
+        brand: "Nature's Best",
+        price: 4.49,
+        quantity: "500g",
+        category: "Vegetables",
+        image: "🍅",
+      },
+      {
+        id: 3,
+        name: "Organic Carrots",
+        brand: "Farm Fresh",
+        price: 2.99,
+        quantity: "300g",
+        category: "Vegetables",
+        image: "🥕",
+      },
+      {
+        id: 4,
+        name: "Organic Blueberries",
+        brand: "BerryPure",
+        price: 5.99,
+        quantity: "150g",
+        category: "Fruits",
+        image: "🫐",
+      },
+      { id: 5, name: "Quinoa", brand: "NaturalHarvest", price: 6.99, quantity: "400g", category: "Grains", image: "🌾" },
+      {
+        id: 6,
+        name: "Organic Honey",
+        brand: "HoneyGold",
+        price: 8.99,
+        quantity: "500ml",
+        category: "Pantry",
+        image: "🍯",
+      },
+    ],
+    3: [
+      {
+        id: 1,
+        name: "Potato Chips",
+        brand: "CrispyBites",
+        price: 2.99,
+        quantity: "150g",
+        category: "Snacks",
+        image: "🥔",
+      },
+      {
+        id: 2,
+        name: "Cola (2L)",
+        brand: "CoolBeverage",
+        price: 2.49,
+        quantity: "2L",
+        category: "Drinks",
+        image: "🥤",
+      },
+      {
+        id: 3,
+        name: "Orange Juice",
+        brand: "FreshPress",
+        price: 3.99,
+        quantity: "1L",
+        category: "Drinks",
+        image: "🍊",
+      },
+      {
+        id: 4,
+        name: "Chocolate Bar",
+        brand: "SweetTreats",
+        price: 1.99,
+        quantity: "50g",
+        category: "Snacks",
+        image: "🍫",
+      },
+      {
+        id: 5,
+        name: "Ice Cream",
+        brand: "FrostyCold",
+        price: 5.49,
+        quantity: "500ml",
+        category: "Frozen",
+        image: "🍦",
+      },
+      { id: 6, name: "Coffee", brand: "BrewMaster", price: 7.99, quantity: "250g", category: "Pantry", image: "☕" },
+      {
+        id: 7,
+        name: "Whole Milk",
+        brand: "Well",
+        price: 1.99,
+        quantity: "1L",
+        category: "Dairy",
+        image: "🥛",
+      },
+    ],
+    4: [
+      {
+        id: 1,
+        name: "Margherita Pizza",
+        brand: "Authentic",
+        price: 12.99,
+        quantity: "Large",
+        category: "Pizza",
+        image: "🍕",
+      },
+      {
+        id: 2,
+        name: "Pepperoni Pizza",
+        brand: "Authentic",
+        price: 14.99,
+        quantity: "Large",
+        category: "Pizza",
+        image: "🍕",
+      },
+      {
+        id: 3,
+        name: "Veggie Burger",
+        brand: "HealthyBite",
+        price: 8.99,
+        quantity: "Single",
+        category: "Burgers",
+        image: "🍔",
+      },
+      {
+        id: 4,
+        name: "Classic Burger",
+        brand: "HealthyBite",
+        price: 9.99,
+        quantity: "Single",
+        category: "Burgers",
+        image: "🍔",
+      },
+      {
+        id: 5,
+        name: "Spaghetti Carbonara",
+        brand: "ItalianChef",
+        price: 11.99,
+        quantity: "1 Plate",
+        category: "Pasta",
+        image: "🍝",
+      },
+      {
+        id: 6,
+        name: "Garlic Bread",
+        brand: "FreshBake",
+        price: 4.99,
+        quantity: "6 pieces",
+        category: "Sides",
+        image: "🥖",
+      },
+    ],
+  };
 
   const [filteredStores, setFilteredStores] = useState(stores);
 
@@ -1011,17 +1015,11 @@ export default function HomeScreen() {
         }
       }
 
-      // Parse intent from user message
-      let aiResponse = "This is a simulated AI response.";
-      let addedItems: string[] = [];
-      let updatedCart = [...cart];
-
       // Try to match product names (don't require keywords like "add" or "order")
       if (selectedStore) {
-        const currentStore = stores.find((s) => s.id === selectedStore.id);
-        console.log("Current store:", currentStore);
-        if (currentStore) {
-          currentStore.catalog.forEach((product) => {
+        console.log("Current store:", selectedStore);
+        if (selectedStoreCatalog.length > 0) {
+          selectedStoreCatalog.forEach((product) => {
             const productNameLower = product.name.toLowerCase();
             console.log("Checking product:", productNameLower);
             // Match if product name is mentioned (even without "add" keyword)
@@ -1078,9 +1076,9 @@ export default function HomeScreen() {
               userMessage.includes("get") ||
               userMessage.includes("want")
             ) {
-              aiResponse = `I couldn't find those items in ${currentStore.name}. Try saying the product name like "milk", "bread", "eggs", etc.`;
+              aiResponse = `I couldn't find those items in ${selectedStore.name}. Try saying the product name like "milk", "bread", "eggs", etc.`;
             } else {
-              aiResponse = `Sure! What would you like to order from ${currentStore.name}?`;
+              aiResponse = `Sure! What would you like to order from ${selectedStore.name}?`;
             }
           }
         }
@@ -1144,7 +1142,11 @@ export default function HomeScreen() {
     // Get full store data from stores array
     const fullStore = stores.find((s) => s.id === store.id) || store;
     
+    // Load the catalog for the selected store
+    const catalog = storeCatalogs[fullStore.id] || [];
+    
     setSelectedStore(fullStore);
+    setSelectedStoreCatalog(catalog);
     setShowStoreSearch(false);
     setSelectedCategory("All");
     setSelectedBrands(new Set(["All"]));
@@ -1428,6 +1430,7 @@ export default function HomeScreen() {
                   messages={messages}
                   inputText={inputText}
                   selectedStore={selectedStore}
+                  catalog={selectedStoreCatalog}
                   currentTab={currentTab}
                   cart={cart}
                   stores={stores}
@@ -1481,6 +1484,7 @@ export default function HomeScreen() {
               {showCatalog && selectedStore && !showConversation && (
                 <Catalog
                   store={selectedStore}
+                  catalog={selectedStoreCatalog}
                   onAdd={(product) => addToCart(product)}
                   onRemove={(id) => removeFromCart(id, selectedStore.id)}
                   getQuantity={(productId) => {
