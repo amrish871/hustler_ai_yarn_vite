@@ -13,6 +13,7 @@ import OrderConfirmation from "../components/OrderConfirmation";
 import RecentlyVisitedStores from "../components/RecentlyVisitedStores";
 import RecentOrders from "../components/RecentOrders";
 import { useFetchCategories } from "../../hooks/useCategoryQuery";
+import { useFetchStoresByCategory } from "../../hooks/useStoresQuery";
 type Message = {
   text?: string;
   image?: string | null;
@@ -42,6 +43,8 @@ type CartItem = Omit<Product, 'quantity'> & { quantity: number; storeId: number 
 export default function HomeScreen() {
 
   const { data: categories, isLoading: categoriesLoading } = useFetchCategories();
+
+  const { data: storess, isLoading: storesLoading } = useFetchStoresByCategory(1);
 
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
   const [deliveryAddress, setDeliveryAddress] = useState<string>("123 Main Street, Apt 4B, New York, NY 10001");
@@ -1293,7 +1296,7 @@ export default function HomeScreen() {
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
 
   useEffect(() => {
-    console.log("data loaded", categories)
+    console.log("data loaded", storess)
   }, []);
 
   return (

@@ -22,3 +22,6 @@ export const AUTH_BYPASS_URLS = [API_REQUEST_LOGIN_OTP, API_VERIFY_LOGIN_OTP]
 
 // categories
 export const API_CATEGORIES = "/api/v1/categories/"
+
+// stores
+export const API_STORES_BY_CATEGORY = (categoryId: number) => `/api/v1/stores/category/${categoryId}`
