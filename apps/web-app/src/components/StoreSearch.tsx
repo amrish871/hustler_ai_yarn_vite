@@ -10,7 +10,6 @@ type Store = {
   distance: string;
   image: string;
   popular: string[];
-  catalog: Product[];
 };
 type Product = {
   id: number;

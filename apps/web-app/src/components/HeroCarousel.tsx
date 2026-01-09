@@ -11,17 +11,16 @@ type HeroCarouselProps = {
     color: string;
   }>;
   carouselIndex: number;
-  setCarouselIndex: (index: number) => void;
+  setCarouselIndex?: (index: number) => void;
   isListening: boolean;
-  toggleListening: () => void;
+  toggleListening?: () => void;
   setShowConversation: (show: boolean) => void;
   setShowStoreSearch: (show: boolean) => void;
   setShowMediaOptions: (show: boolean) => void;
   showMediaOptions: boolean;
   fileInputRef: React.RefObject<HTMLInputElement>;
   cameraInputRef: React.RefObject<HTMLInputElement>;
-  onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
-  onTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
+ 
 };
 
 export default function HeroCarousel({
@@ -36,16 +35,33 @@ export default function HeroCarousel({
   showMediaOptions,
   fileInputRef,
   cameraInputRef,
-  onTouchStart,
-  onTouchEnd,
 }: HeroCarouselProps) {
   const carouselRef = useRef<HTMLDivElement | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+
+  
 
   const goPrev = () =>
     setCarouselIndex(
       (carouselIndex - 1 + carouselSlides.length) % carouselSlides.length
     );
   const goNext = () => setCarouselIndex((carouselIndex + 1) % carouselSlides.length);
+
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      touchStartX.current = e.touches[0].clientX;
+    };
+  
+  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current == null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 50) {
+      if (delta < 0) goNext();
+      else goPrev();
+    }
+    touchStartX.current = null;
+  };
+  
 
   return (
     <div className="w-full mb-5 relative">

@@ -5,7 +5,7 @@ import { API_CATEGORIES } from "./endpoints";
 // Step 1: Send OTP API Call
 export const fetchCategories = async (): Promise<any> => {
   const response = await apiClient.get(API_CATEGORIES);
-  // console.log("Fetched categories:", response.data);
+  console.log("Fetched categories:", response.data);
   return response.data;
   // return [
   //   {

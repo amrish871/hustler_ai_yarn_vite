@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import { ShoppingCart, ArrowLeft, Minus, Plus, Truck, MapPin, Clock, CheckCircle, X, Store, Package } from 'lucide-react';
 
+type CartItem = {
+  storeId: number;
+  id: number;
+  name: string;
+  brand?: string;
+  price: number;
+  category: string;
+  image: string;
+  variant: { id: number; name: string; price: number, quantity: number };
+};
+
 interface CheckoutPageProps {
-  cartItems: Array<{ id: number; name: string; brand?: string; price: number; quantity: number; category: string; image: string; storeId: number }>;
-  stores: Array<{ id: number; name: string; category: string; rating: number; distance: string; image: string; popular: string[]; catalog: any[] }>;
+  cartItems: CartItem[];
+  stores: Array<{ id: number; name: string; category: string; rating: number; distance: string; image: string; popular: string[] }>;
   onBack: () => void;
   onCheckout: (storeId: number) => void;
   getTotalPrice: (storeId?: number) => string;
-  removeFromCart: (itemId: number, storeId: number) => void;
-  addToCart: (item: any) => void;
+  removeFromCart: (itemId: number, variantId: number, storeId: number) => void;
+  addToCart2: (itemId: number, variantId: number, storeId?: number) => void;
   selectedPaymentMethod: string;
   onPaymentMethodChange: (method: string) => void;
   onEditPayment: () => void;
@@ -25,7 +36,7 @@ export default function CheckoutPage({
   onCheckout,
   getTotalPrice,
   removeFromCart,
-  addToCart,
+  addToCart2,
   selectedPaymentMethod,
   onPaymentMethodChange,
   onEditPayment,
@@ -51,7 +62,7 @@ export default function CheckoutPage({
   }, {} as Record<number, { store: any; items: any[] }>);
 
   const storeEntries = Object.values(cartByStore);
-
+  console.log('storeEntries', storeEntries);
   const handleStoreSelect = (storeId: number) => {
     setSelectedStoreForCheckout(storeId);
     setWizardStep('checkout');
@@ -71,7 +82,7 @@ export default function CheckoutPage({
   // Order Confirmation Modal
   if (showOrderConfirmation) {
     const selectedStoreData = storeEntries.find(entry => entry.store.id === selectedStoreForCheckout);
-    const storeTotal = selectedStoreData ? selectedStoreData.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2) : '0.00';
+    const storeTotal = selectedStoreData ? selectedStoreData.items.reduce((sum, item) => sum + item.variant.price * item.variant.quantity, 0).toFixed(2) : '0.00';
     
     return (
       <div className="w-full flex items-center justify-center min-h-screen">
@@ -179,8 +190,8 @@ export default function CheckoutPage({
         {/* Store List */}
         <div className="space-y-3 mb-4 max-h-96 overflow-y-auto pr-2">
           {storeEntries.map(({ store, items }) => {
-            const storeTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
-            const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+            const storeTotal = items.reduce((sum, item) => sum + item.variant.price * item.variant.quantity, 0).toFixed(2);
+            const itemCount = items.reduce((sum, item) => sum + item.variant.quantity, 0);
             
             return (
               <button
@@ -309,7 +320,7 @@ export default function CheckoutPage({
         {storeEntries
           .filter(entry => entry.store.id === selectedStoreForCheckout)
           .map(({ store, items }) => {
-          const storeTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
+          const storeTotal = items.reduce((sum, item) => sum + item.variant.price * item.variant.quantity, 0).toFixed(2);
           return (
             <div key={store.id} className="bg-white/5 rounded-lg p-3 border border-white/10">
               {/* Store Header */}
@@ -343,16 +354,16 @@ export default function CheckoutPage({
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-1 bg-white/10 rounded p-0.5 flex-shrink-0">
                       <button
-                        onClick={() => removeFromCart(item.id, store.id)}
+                        onClick={() => removeFromCart(item.id, item.variant.id, store.id)}
                         className="w-5 h-5 bg-red-500/30 hover:bg-red-500/50 rounded flex items-center justify-center transition-all"
                       >
                         <Minus className="w-2.5 h-2.5 text-white" />
                       </button>
                       <span className="w-4 text-center text-white font-semibold text-xs">
-                        {item.quantity}
+                        {item.variant.quantity}
                       </span>
                       <button
-                        onClick={() => addToCart(item)}
+                        onClick={() => addToCart2(item.id, item.variant.id, store.id)}
                         className="w-5 h-5 bg-green-500/30 hover:bg-green-500/50 rounded flex items-center justify-center transition-all"
                       >
                         <Plus className="w-2.5 h-2.5 text-white" />
@@ -362,7 +373,7 @@ export default function CheckoutPage({
                     {/* Item Total */}
                     <div className="text-right">
                       <p className="text-white/80 font-semibold text-sm">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ${(item.variant.price * item.variant.quantity).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -404,7 +415,7 @@ export default function CheckoutPage({
             {storeEntries
               .filter(entry => entry.store.id === selectedStoreForCheckout)
               .map(({ items }) => {
-                const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
+                const total = items.reduce((sum, item) => sum + item.variant.price * item.variant.quantity, 0).toFixed(2);
                 return (
                   <div key={selectedStoreForCheckout} className="text-right">
                     <div className="text-white/70 text-xs mb-1">Total</div>

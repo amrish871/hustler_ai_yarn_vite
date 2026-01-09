@@ -1,16 +1,18 @@
 import { Plus, Minus } from 'lucide-react';
 import { Product } from '../screens/Home/Home.types';
-
+// product: Product;
 type Props = {
-  product: Product;
+  product: any;
   quantity: number;
   onAdd: () => void;
   onRemove: () => void;
+  variant?: any;
 };
 
 export function ProductCard({
   product,
   quantity,
+  variant,
   onAdd,
   onRemove
 }: Props) {
@@ -28,7 +30,7 @@ export function ProductCard({
 
       {/* Price */}
       <div className="text-green-300 text-sm text-center mb-2">
-        ₹{product.price}
+        ₹{variant.price}
       </div>
 
       {/* Actions */}

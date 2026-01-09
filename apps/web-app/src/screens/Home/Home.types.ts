@@ -20,7 +20,6 @@ export type Store = {
   distance: string;
   image: string;
   popular: string[];
-  catalog: Product[];
 };
 
 export type CartItem = Product & {

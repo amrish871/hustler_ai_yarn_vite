@@ -1,5 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Store, MapPin } from "lucide-react";
+import {
+  Store,
+  MapPin,
+  ArrowLeft,
+  ShoppingCart,
+  MessageSquare,
+  Grid,
+  Plus,
+  Minus,
+} from "lucide-react";
 import { useCart } from "../context/CartContext";
 import CheckoutPage from "../components/CheckoutPage";
 import HeroCarousel from "../components/HeroCarousel";
@@ -14,6 +23,10 @@ import RecentlyVisitedStores from "../components/RecentlyVisitedStores";
 import RecentOrders from "../components/RecentOrders";
 import { useFetchCategories } from "../../hooks/useCategoryQuery";
 import { useFetchStoresByCategory } from "../../hooks/useStoresQuery";
+import HeaderTabs from "../components/HeaderTabs";
+import Header from "../components/Header";
+import Cart from "../components/Cart";
+import Catalogs from "../components/Catalogs";
 type Message = {
   text?: string;
   image?: string | null;
@@ -37,19 +50,45 @@ type Product = {
   quantity?: string;
   category: string;
   image: string;
+  variants: { id: number; name: string; price: number, quantity: string }[];
 };
-type CartItem = Omit<Product, 'quantity'> & { quantity: number; storeId: number };
+type CartProduct = {
+  id: number;
+  name: string;
+  brand?: string;
+  price: number;
+  category: string;
+  image: string;
+  variants?: { id: number; name: string; price: number, quantity: number }[];
+};
+type CartItem = {
+  storeId: number;
+  id: number;
+  name: string;
+  brand?: string;
+  price: number;
+  category: string;
+  image: string;
+  variant: { id: number; name: string; price: number, quantity: number };
+};
 export default function HomeScreen() {
+  const { data: categories, isLoading: categoriesLoading } =
+    useFetchCategories();
 
-  const { data: categories, isLoading: categoriesLoading } = useFetchCategories();
-
-  const { data: storess, isLoading: storesLoading } = useFetchStoresByCategory(1);
+  const { data: storess, isLoading: storesLoading } =
+    useFetchStoresByCategory(1);
 
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
-  const [deliveryAddress, setDeliveryAddress] = useState<string>("123 Main Street, Apt 4B, New York, NY 10001");
+  const [deliveryAddress, setDeliveryAddress] = useState<string>(
+    "123 Main Street, Apt 4B, New York, NY 10001"
+  );
 
-  const [storeProductSuggestions, setStoreProductSuggestions] = useState<{store: Store, product: Product}[]>([]);
-  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('delivery');
+  const [storeProductSuggestions, setStoreProductSuggestions] = useState<
+    { store: Store; product: Product }[]
+  >([]);
+  const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">(
+    "delivery"
+  );
   const [showConversation, setShowConversation] = useState<boolean>(false);
   const [showCheckout, setShowCheckout] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -59,46 +98,71 @@ export default function HomeScreen() {
   const [showStoreSearch, setShowStoreSearch] = useState<boolean>(false);
   const [storeSearchQuery, setStoreSearchQuery] = useState<string>("");
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [selectedStoreCatalog, setSelectedStoreCatalog] = useState<Product[]>([]);
+  const [selectedStoreCatalog, setSelectedStoreCatalog] = useState<Product[]>(
+    []
+  );
   const [showCatalog, setShowCatalog] = useState<boolean>(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set(["All"]));
+  const [selectedBrands, setSelectedBrands] = useState<Set<string>>(
+    new Set(["All"])
+  );
   const [showBrandDropdown, setShowBrandDropdown] = useState<boolean>(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("cod");
-  const [showCheckoutPaymentModal, setShowCheckoutPaymentModal] = useState<boolean>(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<string>("cod");
+  const [showCheckoutPaymentModal, setShowCheckoutPaymentModal] =
+    useState<boolean>(false);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [orderPlaced, setOrderPlaced] = useState<boolean>(false);
-  
-  
-  const [currentTab, setCurrentTab] = useState<"chat" | "catalog" | "cart">("chat");
+
+  const [currentTab, setCurrentTab] = useState<"chat" | "catalog" | "cart">(
+    "chat"
+  );
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [orders, setOrders] = useState<any[]>([]);
-  const [showShoppingAssistant, setShowShoppingAssistant] = useState<boolean>(false);
+  const [showShoppingAssistant, setShowShoppingAssistant] =
+    useState<boolean>(false);
   const [assistantStep, setAssistantStep] = useState<number>(0);
-  const [assistantAnswers, setAssistantAnswers] = useState<Record<string, string>>({});
-  const [assistantSuggestions, setAssistantSuggestions] = useState<Array<{store: Store, product: Product}>>([]);
-  const [recommendationQuantities, setRecommendationQuantities] = useState<Record<string, number>>({});
-  const [recentlyVisitedStores, setRecentlyVisitedStores] = useState<Store[]>([]);
-  
+  const [assistantAnswers, setAssistantAnswers] = useState<
+    Record<string, string>
+  >({});
+  const [assistantSuggestions, setAssistantSuggestions] = useState<
+    Array<{ store: Store; product: Product }>
+  >([]);
+  const [recommendationQuantities, setRecommendationQuantities] = useState<
+    Record<string, number>
+  >({});
+  const [recentlyVisitedStores, setRecentlyVisitedStores] = useState<Store[]>(
+    []
+  );
+
   // Cart context
   const { setCartCount, setOnCartClick } = useCart();
-  
+
   const addresses = [
-    { id: 1, label: "Home", address: "123 Main Street, Apt 4B, New York, NY 10001" },
-    { id: 2, label: "Office", address: "456 Business Ave, Suite 200, New York, NY 10002" },
-    { id: 3, label: "Friend's Place", address: "789 Oak Road, Brooklyn, NY 10003" },
+    {
+      id: 1,
+      label: "Home",
+      address: "123 Main Street, Apt 4B, New York, NY 10001",
+    },
+    {
+      id: 2,
+      label: "Office",
+      address: "456 Business Ave, Suite 200, New York, NY 10002",
+    },
+    {
+      id: 3,
+      label: "Friend's Place",
+      address: "789 Oak Road, Brooklyn, NY 10003",
+    },
   ];
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  
-  
-  const touchStartX = useRef<number | null>(null);
 
-  const carouselSlides = categoriesLoading ? [] : categories
+  const carouselSlides = categoriesLoading ? [] : categories;
   // [
   //   {
   //     id: 1,
@@ -123,25 +187,11 @@ export default function HomeScreen() {
   //   },
   // ];
 
-  const goPrev = () =>
-    setCarouselIndex(
-      (i) => (i - 1 + carouselSlides.length) % carouselSlides.length
-    );
-  const goNext = () => setCarouselIndex((i) => (i + 1) % carouselSlides.length);
-
-  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartX.current == null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(delta) > 50) {
-      if (delta < 0) goNext();
-      else goPrev();
-    }
-    touchStartX.current = null;
-  };
+  // const goPrev = () =>
+  //   setCarouselIndex(
+  //     (i) => (i - 1 + carouselSlides.length) % carouselSlides.length
+  //   );
+  // const goNext = () => setCarouselIndex((i) => (i + 1) % carouselSlides.length);
 
   // Auto-focus the chat input when chat tab is active
   useEffect(() => {
@@ -152,7 +202,7 @@ export default function HomeScreen() {
 
   // Sync cart state with CartContext for navbar
   useEffect(() => {
-    const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const totalCartCount = cart.reduce((sum, item) => sum + item.variant.quantity, 0);
     setCartCount(totalCartCount);
     setOnCartClick(() => () => {
       setShowCheckout(true);
@@ -171,17 +221,25 @@ export default function HomeScreen() {
   // Shopping Assistant questions
   const getAssistantQuestions = () => {
     return [
-      { key: "type", label: "What product are you looking for? (e.g., fan, milk, pizza)" },
+      {
+        key: "type",
+        label: "What product are you looking for? (e.g., fan, milk, pizza)",
+      },
       { key: "budget", label: "What's your budget range? (e.g., $100-500)" },
       { key: "brand", label: "Any preferred brand? (type 'skip' to skip)" },
-      { key: "features", label: "Any must-have features? (type 'skip' to skip)" },
+      {
+        key: "features",
+        label: "Any must-have features? (type 'skip' to skip)",
+      },
       { key: "color", label: "Preferred color? (type 'skip' to skip)" },
     ];
   };
 
   // Filter products for shopping assistant (includes store info)
-  const filterAssistantProducts = (answers: Record<string, string>): Array<{store: Store, product: Product}> => {
-    const results: Array<{store: Store, product: Product}> = [];
+  const filterAssistantProducts = (
+    answers: Record<string, string>
+  ): Array<{ store: Store; product: Product }> => {
+    const results: Array<{ store: Store; product: Product }> = [];
 
     stores.forEach((store) => {
       let filtered = store.catalog;
@@ -209,7 +267,8 @@ export default function HomeScreen() {
       if (answers.brand && answers.brand.toLowerCase() !== "skip") {
         filtered = filtered.filter(
           (p) =>
-            p.brand?.toLowerCase().includes(answers.brand.toLowerCase()) || false
+            p.brand?.toLowerCase().includes(answers.brand.toLowerCase()) ||
+            false
         );
       }
 
@@ -240,10 +299,7 @@ export default function HomeScreen() {
     setAssistantAnswers(newAnswers);
 
     // Post user's answer to chat
-    setMessages((prev) => [
-      ...prev,
-      { text: answer, sender: "user" },
-    ]);
+    setMessages((prev) => [...prev, { text: answer, sender: "user" }]);
 
     // Check if we should show suggestions
     if (
@@ -252,7 +308,7 @@ export default function HomeScreen() {
     ) {
       const filtered = filterAssistantProducts(newAnswers);
       setAssistantSuggestions(filtered);
-      
+
       // Post suggestion message with recommendations
       setMessages((prev) => [
         ...prev,
@@ -274,7 +330,7 @@ export default function HomeScreen() {
     if (assistantStep < questions.length - 1) {
       setAssistantStep(assistantStep + 1);
       const nextQuestion = questions[assistantStep + 1];
-      
+
       setMessages((prev) => [
         ...prev,
         { text: nextQuestion.label, sender: "ai" },
@@ -282,7 +338,7 @@ export default function HomeScreen() {
     } else {
       const filtered = filterAssistantProducts(newAnswers);
       setAssistantSuggestions(filtered);
-      
+
       setMessages((prev) => [
         ...prev,
         {
@@ -302,7 +358,9 @@ export default function HomeScreen() {
   // Handle selecting a recommendation
   const handleSelectRecommendation = (storeId: number, product: Product) => {
     // Find the store
-    const selectedStoreFromRecommendation = stores.find((s) => s.id === storeId);
+    const selectedStoreFromRecommendation = stores.find(
+      (s) => s.id === storeId
+    );
     if (!selectedStoreFromRecommendation) return;
 
     // Get the quantity for this recommendation
@@ -352,9 +410,9 @@ export default function HomeScreen() {
     setMessages((prev) => [
       ...prev,
       {
-        text: `Our Shopping Assistant recommends: ${product.image} ${product.name} - $${product.price}${
-          product.brand ? ` (${product.brand})` : ""
-        }`,
+        text: `Our Shopping Assistant recommends: ${product.image} ${
+          product.name
+        } - $${product.price}${product.brand ? ` (${product.brand})` : ""}`,
         sender: "ai",
       },
     ]);
@@ -422,6 +480,10 @@ export default function HomeScreen() {
         quantity: "1L",
         category: "Dairy",
         image: "🥛",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "1L" },
+          { id: 12, name: "500ml", price: 2.49, quantity: "500ml" }
+        ]
       },
       {
         id: 2,
@@ -431,6 +493,9 @@ export default function HomeScreen() {
         quantity: "500g",
         category: "Bakery",
         image: "🍞",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "500g" },
+        ]
       },
       {
         id: 3,
@@ -440,6 +505,9 @@ export default function HomeScreen() {
         quantity: "12 pieces",
         category: "Dairy",
         image: "🥚",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "12 pieces" },
+        ]
       },
       {
         id: 4,
@@ -449,6 +517,9 @@ export default function HomeScreen() {
         quantity: "200g",
         category: "Dairy",
         image: "🧀",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "200g" },
+        ]
       },
       {
         id: 5,
@@ -458,8 +529,22 @@ export default function HomeScreen() {
         quantity: "1 bunch",
         category: "Fruits",
         image: "🍌",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "1 bunch" },
+        ] 
       },
-      { id: 6, name: "Apples", brand: "Orchard", price: 3.49, quantity: "1kg", category: "Fruits", image: "🍎" },
+      {
+        id: 6,
+        name: "Apples",
+        brand: "Orchard",
+        price: 3.49,
+        quantity: "1kg",
+        category: "Fruits",
+        image: "🍎",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "1kg" },
+        ]
+      },
     ],
     2: [
       {
@@ -470,6 +555,9 @@ export default function HomeScreen() {
         quantity: "200g",
         category: "Vegetables",
         image: "🥬",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "200g" },
+        ]
       },
       {
         id: 2,
@@ -479,6 +567,9 @@ export default function HomeScreen() {
         quantity: "500g",
         category: "Vegetables",
         image: "🍅",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "500g" },
+        ]
       },
       {
         id: 3,
@@ -488,6 +579,9 @@ export default function HomeScreen() {
         quantity: "300g",
         category: "Vegetables",
         image: "🥕",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "300g" },
+        ]
       },
       {
         id: 4,
@@ -497,8 +591,22 @@ export default function HomeScreen() {
         quantity: "150g",
         category: "Fruits",
         image: "🫐",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "150g" },
+        ]
       },
-      { id: 5, name: "Quinoa", brand: "NaturalHarvest", price: 6.99, quantity: "400g", category: "Grains", image: "🌾" },
+      {
+        id: 5,
+        name: "Quinoa",
+        brand: "NaturalHarvest",
+        price: 6.99,
+        quantity: "400g",
+        category: "Grains",
+        image: "🌾",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "400g" },
+        ]
+      },
       {
         id: 6,
         name: "Organic Honey",
@@ -507,6 +615,9 @@ export default function HomeScreen() {
         quantity: "500ml",
         category: "Pantry",
         image: "🍯",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "500ml" },
+        ]
       },
     ],
     3: [
@@ -518,6 +629,9 @@ export default function HomeScreen() {
         quantity: "150g",
         category: "Snacks",
         image: "🥔",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "150g" },
+        ]
       },
       {
         id: 2,
@@ -527,6 +641,9 @@ export default function HomeScreen() {
         quantity: "2L",
         category: "Drinks",
         image: "🥤",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "2L" },
+        ]
       },
       {
         id: 3,
@@ -536,6 +653,9 @@ export default function HomeScreen() {
         quantity: "1L",
         category: "Drinks",
         image: "🍊",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "1L" },
+        ]
       },
       {
         id: 4,
@@ -545,6 +665,9 @@ export default function HomeScreen() {
         quantity: "50g",
         category: "Snacks",
         image: "🍫",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "50g" },
+        ]
       },
       {
         id: 5,
@@ -554,8 +677,22 @@ export default function HomeScreen() {
         quantity: "500ml",
         category: "Frozen",
         image: "🍦",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "500ml" },
+        ]
       },
-      { id: 6, name: "Coffee", brand: "BrewMaster", price: 7.99, quantity: "250g", category: "Pantry", image: "☕" },
+      {
+        id: 6,
+        name: "Coffee",
+        brand: "BrewMaster",
+        price: 7.99,
+        quantity: "250g",
+        category: "Pantry",
+        image: "☕",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "250g" },
+        ]
+      },
       {
         id: 7,
         name: "Whole Milk",
@@ -564,6 +701,9 @@ export default function HomeScreen() {
         quantity: "1L",
         category: "Dairy",
         image: "🥛",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "1L" },
+        ]
       },
     ],
     4: [
@@ -575,6 +715,9 @@ export default function HomeScreen() {
         quantity: "Large",
         category: "Pizza",
         image: "🍕",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "Large" },
+        ]
       },
       {
         id: 2,
@@ -584,6 +727,9 @@ export default function HomeScreen() {
         quantity: "Large",
         category: "Pizza",
         image: "🍕",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "Large" },
+        ]
       },
       {
         id: 3,
@@ -593,6 +739,9 @@ export default function HomeScreen() {
         quantity: "Single",
         category: "Burgers",
         image: "🍔",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "Single" },
+        ]
       },
       {
         id: 4,
@@ -602,6 +751,9 @@ export default function HomeScreen() {
         quantity: "Single",
         category: "Burgers",
         image: "🍔",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "Single" },
+        ]
       },
       {
         id: 5,
@@ -611,6 +763,9 @@ export default function HomeScreen() {
         quantity: "1 Plate",
         category: "Pasta",
         image: "🍝",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "1 Plate" },
+        ]
       },
       {
         id: 6,
@@ -620,6 +775,9 @@ export default function HomeScreen() {
         quantity: "6 pieces",
         category: "Sides",
         image: "🥖",
+        variants: [
+          { id: 11, name: "2L", price: 6.99, quantity: "6 pieces" },
+        ]
       },
     ],
   };
@@ -629,7 +787,9 @@ export default function HomeScreen() {
   const toggleListening = () => {
     if (!isListening) {
       // Start listening
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition =
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
         alert("Speech Recognition not supported in your browser");
         return;
@@ -646,7 +806,7 @@ export default function HomeScreen() {
         const transcript = Array.from(event.results)
           .map((result: any) => result[0].transcript)
           .join("");
-        
+
         // Process the transcript immediately
         if (transcript.trim()) {
           const userMessage = transcript.toLowerCase();
@@ -660,7 +820,13 @@ export default function HomeScreen() {
           let updatedCart = [...cart];
 
           // Check if user is trying to select a store
-          if (!selectedStore && (userMessage.includes("store") || userMessage.includes("shop") || userMessage.includes("select") || userMessage.includes("browse"))) {
+          if (
+            !selectedStore &&
+            (userMessage.includes("store") ||
+              userMessage.includes("shop") ||
+              userMessage.includes("select") ||
+              userMessage.includes("browse"))
+          ) {
             // Try to match store name
             const matchedStore = stores.find(
               (store) =>
@@ -732,7 +898,9 @@ export default function HomeScreen() {
 
                 if (addedItems.length > 0) {
                   setCart(updatedCart);
-                  aiResponse = `Great! I've added ${addedItems.join(", ")} to your cart. 🛒`;
+                  aiResponse = `Great! I've added ${addedItems.join(
+                    ", "
+                  )} to your cart. 🛒`;
                 } else {
                   aiResponse = `I couldn't find those items in ${selectedStore.name}. Try saying the product name like "milk", "bread", "eggs", etc.`;
                 }
@@ -769,7 +937,7 @@ export default function HomeScreen() {
 
   const handleInputChange = (value: string) => {
     setInputText(value);
-    
+
     if (value.trim().length < 2) {
       setShowSuggestions(false);
       setStoreProductSuggestions([]);
@@ -799,15 +967,15 @@ export default function HomeScreen() {
     const searchLower = value.toLowerCase();
     if (!selectedStore) {
       // No store selected: search all stores for product
-      const found: {store: Store, product: Product}[] = [];
-      stores.forEach(store => {
-        store.catalog.forEach(product => {
+      const found: { store: Store; product: Product }[] = [];
+      stores.forEach((store) => {
+        store.catalog.forEach((product) => {
           if (
             product.name.toLowerCase().includes(searchLower) ||
             product.brand?.toLowerCase().includes(searchLower) ||
             product.category.toLowerCase().includes(searchLower)
           ) {
-            found.push({store, product});
+            found.push({ store, product });
           }
         });
       });
@@ -846,18 +1014,21 @@ export default function HomeScreen() {
       const userMessage = inputText.toLowerCase();
       console.log("User message:", userMessage);
       console.log("Selected store:", selectedStore);
-      
+
       // If in shopping assistant mode, handle as assistant answer
-      if (showShoppingAssistant && assistantStep < getAssistantQuestions().length) {
+      if (
+        showShoppingAssistant &&
+        assistantStep < getAssistantQuestions().length
+      ) {
         const answerText = inputText.trim();
         setInputText("");
         handleAssistantAnswer(answerText);
         return;
       }
-      
+
       setMessages((prev) => [...prev, { text: inputText, sender: "user" }]);
       setInputText("");
-      
+
       // Check if user is asking for help/recommendations - trigger shopping assistant
       if (
         userMessage.includes("help") ||
@@ -876,7 +1047,7 @@ export default function HomeScreen() {
         setAssistantStep(0);
         setAssistantAnswers({});
         setAssistantSuggestions([]);
-        
+
         const aiResponse = `Sure! Let me help you find the perfect product. I'll ask you a few questions to understand your needs better.`;
         setTimeout(() => {
           const questions = getAssistantQuestions();
@@ -888,7 +1059,7 @@ export default function HomeScreen() {
         }, 500);
         return;
       }
-      
+
       // Check if user wants to browse stores
       if (
         userMessage.includes("browse") ||
@@ -900,7 +1071,10 @@ export default function HomeScreen() {
         const aiResponse = `Sure! Here are the available stores. Just click on one to select it.`;
         console.log("AI Response:", aiResponse);
         setTimeout(() => {
-          setMessages((prev: Message[]) => [...prev, { text: aiResponse, sender: "ai" }]);
+          setMessages((prev: Message[]) => [
+            ...prev,
+            { text: aiResponse, sender: "ai" },
+          ]);
           setTimeout(() => {
             inputRef.current?.focus();
           }, 0);
@@ -922,7 +1096,10 @@ export default function HomeScreen() {
           const aiResponse = `Great! You selected ${matchedStore.name}. What would you like to order?`;
           console.log("AI Response:", aiResponse);
           setTimeout(() => {
-            setMessages((prev: Message[]) => [...prev, { text: aiResponse, sender: "ai" }]);
+            setMessages((prev: Message[]) => [
+              ...prev,
+              { text: aiResponse, sender: "ai" },
+            ]);
             setTimeout(() => {
               inputRef.current?.focus();
             }, 0);
@@ -930,7 +1107,7 @@ export default function HomeScreen() {
           return;
         }
       }
-      
+
       // Check for checkout/payment intent first
       if (
         userMessage.includes("checkout") ||
@@ -947,9 +1124,12 @@ export default function HomeScreen() {
           const nearestStore = stores[2]; // QuickStop Grocery is nearest
           handleSelectStore(nearestStore);
           currentSelectedStore = nearestStore;
-          
+
           const aiMessage = `No store was selected. I've automatically selected ${nearestStore.name} (nearest store at ${nearestStore.distance}).`;
-          setMessages((prev: Message[]) => [...prev, { text: aiMessage, sender: "ai" }]);
+          setMessages((prev: Message[]) => [
+            ...prev,
+            { text: aiMessage, sender: "ai" },
+          ]);
         }
 
         // Check if there are items in cart
@@ -965,7 +1145,10 @@ export default function HomeScreen() {
             const aiResponse = `Perfect! Here's your checkout page. Review your items and select a payment method. 🛒`;
             console.log("AI Response:", aiResponse);
             setTimeout(() => {
-              setMessages((prev: Message[]) => [...prev, { text: aiResponse, sender: "ai" }]);
+              setMessages((prev: Message[]) => [
+                ...prev,
+                { text: aiResponse, sender: "ai" },
+              ]);
               setTimeout(() => {
                 inputRef.current?.focus();
               }, 0);
@@ -978,7 +1161,10 @@ export default function HomeScreen() {
               const aiResponse = `Great! Your order has been placed with Cash on Delivery from ${currentSelectedStore.name}. 🎉`;
               console.log("AI Response:", aiResponse);
               setTimeout(() => {
-                setMessages((prev: Message[]) => [...prev, { text: aiResponse, sender: "ai" }]);
+                setMessages((prev: Message[]) => [
+                  ...prev,
+                  { text: aiResponse, sender: "ai" },
+                ]);
                 setTimeout(() => {
                   setOrderPlaced(false);
                   setShowConversation(false);
@@ -994,7 +1180,10 @@ export default function HomeScreen() {
               const aiResponse = `Please enter your ${selectedPaymentMethod.toUpperCase()} details to complete the payment. 💳`;
               console.log("AI Response:", aiResponse);
               setTimeout(() => {
-                setMessages((prev: Message[]) => [...prev, { text: aiResponse, sender: "ai" }]);
+                setMessages((prev: Message[]) => [
+                  ...prev,
+                  { text: aiResponse, sender: "ai" },
+                ]);
                 setTimeout(() => {
                   inputRef.current?.focus();
                 }, 0);
@@ -1006,7 +1195,10 @@ export default function HomeScreen() {
           const aiResponse = "Your cart is empty. Please add some items first!";
           console.log("AI Response:", aiResponse);
           setTimeout(() => {
-            setMessages((prev: Message[]) => [...prev, { text: aiResponse, sender: "ai" }]);
+            setMessages((prev: Message[]) => [
+              ...prev,
+              { text: aiResponse, sender: "ai" },
+            ]);
             setTimeout(() => {
               inputRef.current?.focus();
             }, 0);
@@ -1031,19 +1223,21 @@ export default function HomeScreen() {
 
             if (isMatched) {
               console.log("Match found:", product.name);
-              
+
               // Parse quantity from user message
               // Look for numbers like "2 milk", "milk 2", "2x milk", etc.
               let quantity = 1;
-              const numberMatch = userMessage.match(/\b(\d+)\s*(x|of)?\s*(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\b|\b(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\s+(\d+)\b/i);
-              
+              const numberMatch = userMessage.match(
+                /\b(\d+)\s*(x|of)?\s*(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\b|\b(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\s+(\d+)\b/i
+              );
+
               if (numberMatch) {
                 const num = numberMatch[1] || numberMatch[5];
                 if (num) {
                   quantity = parseInt(num);
                 }
               }
-              
+
               // Add item to cart
               const existingItemIndex = updatedCart.findIndex(
                 (item) =>
@@ -1060,14 +1254,18 @@ export default function HomeScreen() {
                 });
               }
 
-              addedItems.push(`${quantity}x ${product.name} (${product.image})`);
+              addedItems.push(
+                `${quantity}x ${product.name} (${product.image})`
+              );
             }
           });
 
           console.log("Added items:", addedItems);
           if (addedItems.length > 0) {
             setCart(updatedCart);
-            aiResponse = `Great! I've added ${addedItems.join(", ")} to your cart. 🛒`;
+            aiResponse = `Great! I've added ${addedItems.join(
+              ", "
+            )} to your cart. 🛒`;
           } else {
             // Check if user is asking for help or just making conversation
             if (
@@ -1091,7 +1289,10 @@ export default function HomeScreen() {
 
       console.log("AI Response:", aiResponse);
       setTimeout(() => {
-        setMessages((prev: Message[]) => [...prev, { text: aiResponse, sender: "ai" }]);
+        setMessages((prev: Message[]) => [
+          ...prev,
+          { text: aiResponse, sender: "ai" },
+        ]);
         // Refocus input after message is added
         setTimeout(() => {
           inputRef.current?.focus();
@@ -1141,10 +1342,10 @@ export default function HomeScreen() {
   const handleSelectStore = (store: Store) => {
     // Get full store data from stores array
     const fullStore = stores.find((s) => s.id === store.id) || store;
-    
+
     // Load the catalog for the selected store
     const catalog = storeCatalogs[fullStore.id] || [];
-    
+
     setSelectedStore(fullStore);
     setSelectedStoreCatalog(catalog);
     setShowStoreSearch(false);
@@ -1157,7 +1358,7 @@ export default function HomeScreen() {
     ]);
     setShowConversation(true);
     setShowCatalog(true);
-    
+
     // Track recently visited store with full data
     setRecentlyVisitedStores((prev) => {
       const filtered = prev.filter((s) => s.id !== fullStore.id);
@@ -1176,36 +1377,85 @@ export default function HomeScreen() {
     setShowConversation(true);
   };
 
-  const addToCart = (item: Product | CartItem) => {
+  const addToCart = (item: Product, variantIndex: number) => {
+    debugger;
     if (!selectedStore) return;
-    const existing = cart.find(
-      (c) => c.id === item.id && c.storeId === selectedStore.id
-    );
+    const existing = cart.find((c) => 
+      c.storeId === selectedStore.id &&
+      c.id === item.id &&
+      c.variant.id === item.variants[variantIndex].id
+      );
     if (existing) {
       setCart(
         cart.map((c) =>
-          c.id === item.id && c.storeId === selectedStore.id
-            ? { ...c, quantity: c.quantity + 1 }
+          c.storeId === selectedStore.id &&
+          c.id === item.id && 
+          c.variant.id === item.variants[variantIndex].id
+            ? { ...c, variant: { ...c.variant, quantity: c.variant.quantity + 1 } }
             : c
         )
       );
     } else {
-      setCart([...cart, { ...item as Omit<Product, 'quantity'>, quantity: 1, storeId: selectedStore.id }]);
+      setCart([
+        ...cart,
+        {
+          storeId: selectedStore.id,
+          id: item.id,
+          name: item.name,
+          brand: item.brand,
+          price: item.price,
+          category: item.category,
+          image: item.image,
+          variant: { 
+            id: item?.variants[variantIndex].id, 
+            name: item?.variants[variantIndex].name, 
+            price: item?.variants[variantIndex].price, 
+            quantity: 1
+          }
+        },
+      ]);
     }
   };
 
-  const removeFromCart = (itemId: number, storeId?: number) => {
+  const addToCart2 = (itemId: number, variantId: number, storeId?: number) => {
+    debugger;
     const targetStoreId = storeId || selectedStore?.id;
     if (!targetStoreId) return;
-    
+    const existing = cart.find((c) => 
+      c.storeId === targetStoreId &&
+      c.id === itemId &&
+      c.variant.id === variantId
+      );
+    if (existing && existing.variant.quantity > 1) {
+      setCart(
+        cart.map((c) =>
+          c.storeId === targetStoreId &&
+          c.id === itemId &&
+          c.variant.id === variantId
+            ? { ...c, variant: { ...c.variant, quantity: c.variant.quantity + 1 } }
+            : c
+        )
+      );
+    }
+  };
+
+  const removeFromCart = (itemId: number, variantId: number, storeId?: number) => {
+    const targetStoreId = storeId || selectedStore?.id;
+    if (!targetStoreId) return;
+
     const existing = cart.find(
-      (c) => c.id === itemId && c.storeId === targetStoreId
-    );
-    if (existing && existing.quantity > 1) {
+      (c) => c.storeId === targetStoreId &&
+      c.id === itemId&&
+      c.variant.id === variantId
+      );
+    // const existing = cart.find(
+    //   (c) => c.id === itemId && c.storeId === targetStoreId
+    // );
+    if (existing && existing.variant.quantity > 1) {
       setCart(
         cart.map((c) =>
           c.id === itemId && c.storeId === targetStoreId
-            ? { ...c, quantity: c.quantity - 1 }
+            ? { ...c, variant: { ...c.variant, quantity: c.variant.quantity - 1 } }
             : c
         )
       );
@@ -1220,17 +1470,18 @@ export default function HomeScreen() {
     const targetStoreId = storeId || selectedStore?.id;
     const subtotal = cart
       .filter((c) => c.storeId === targetStoreId)
-      .reduce((sum, item) => sum + item.price * item.quantity, 0);
-    
+      .reduce((sum, item) => sum + item.price * item.variant.quantity, 0);
+
     // Add delivery charges if delivery is selected and order is less than $20
-    const deliveryCharge = fulfillmentType === 'delivery' && subtotal < 20 ? 5 : 0;
-    
+    const deliveryCharge =
+      fulfillmentType === "delivery" && subtotal < 20 ? 5 : 0;
+
     return (subtotal + deliveryCharge).toFixed(2);
   };
   const getCartCount = () =>
     cart
       .filter((c) => c.storeId === selectedStore?.id)
-      .reduce((sum, item) => sum + item.quantity, 0);
+      .reduce((sum, item) => sum + item.variant.quantity, 0);
 
   const handleCheckout = (storeId: number) => {
     if (selectedPaymentMethod === "cod") {
@@ -1238,7 +1489,9 @@ export default function HomeScreen() {
       setTimeout(() => {
         setOrderPlaced(false);
         // Remove only items from the checked-out store
-        setCart((prevCart) => prevCart.filter((item) => item.storeId !== storeId));
+        setCart((prevCart) =>
+          prevCart.filter((item) => item.storeId !== storeId)
+        );
         setShowCheckout(false);
         // If no more items in cart, reset the UI
         const remainingItems = cart.filter((item) => item.storeId !== storeId);
@@ -1255,7 +1508,9 @@ export default function HomeScreen() {
       setTimeout(() => {
         setOrderPlaced(false);
         // Remove only items from the checked-out store
-        setCart((prevCart) => prevCart.filter((item) => item.storeId !== storeId));
+        setCart((prevCart) =>
+          prevCart.filter((item) => item.storeId !== storeId)
+        );
         setShowCheckout(false);
         // If no more items in cart, reset the UI
         const remainingItems = cart.filter((item) => item.storeId !== storeId);
@@ -1269,15 +1524,18 @@ export default function HomeScreen() {
     }
   };
 
-
-
   const saveOrder = () => {
     if (selectedStore) {
-      const orderItems = cart.filter((item) => item.storeId === selectedStore.id);
+      const orderItems = cart.filter(
+        (item) => item.storeId === selectedStore.id
+      );
       const newOrder = {
         id: Math.floor(Math.random() * 1000000),
         date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         store: selectedStore,
         items: orderItems,
         total: getTotalPrice(),
@@ -1288,22 +1546,17 @@ export default function HomeScreen() {
     }
   };
 
-
-
-
-
-  // carouselRef, carouselIndex, carouselSlides, getCartCount(), 
+  // carouselRef, carouselIndex, carouselSlides, getCartCount(),
   // isListening, toggleListening, setShowConversation, setShowMediaOptions
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
 
   useEffect(() => {
-    console.log("data loaded", storess)
+    console.log("data loaded", storess);
   }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-
       {/* Start show Order Confirmation when order is placed */}
       {orderPlaced && (
         <OrderConfirmation
@@ -1340,7 +1593,7 @@ export default function HomeScreen() {
           setShowCheckoutPaymentModal={setShowCheckoutPaymentModal}
         />
       )}
-      {/* End show Payment Modal when payment method is Card/UPI */}  
+      {/* End show Payment Modal when payment method is Card/UPI */}
 
       {/* Start show Checkout Modal */}
       {showCheckout && (
@@ -1354,7 +1607,7 @@ export default function HomeScreen() {
                 onCheckout={handleCheckout}
                 getTotalPrice={getTotalPrice}
                 removeFromCart={removeFromCart}
-                addToCart={addToCart}
+                addToCart2={addToCart2}
                 selectedPaymentMethod={selectedPaymentMethod}
                 onPaymentMethodChange={setSelectedPaymentMethod}
                 onEditPayment={() => setShowCheckoutPaymentModal(true)}
@@ -1370,7 +1623,7 @@ export default function HomeScreen() {
         </div>
       )}
       {/* End show Checkout Modal */}
-      
+
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
         <div className="w-full max-w-4xl">
           {/* Start Header with delivery address */}
@@ -1388,7 +1641,7 @@ export default function HomeScreen() {
             </button>
           </div>
           {/* End Header with delivery address */}
-          
+
           {/* Main Card */}
           <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center">
@@ -1397,22 +1650,20 @@ export default function HomeScreen() {
                 !showStoreSearch &&
                 !selectedStore &&
                 !showCatalog && (
-                <HeroCarousel
-                  carouselSlides={carouselSlides}
-                  carouselIndex={carouselIndex}
-                  setCarouselIndex={setCarouselIndex}
-                  isListening={isListening}
-                  toggleListening={toggleListening}
-                  setShowConversation={setShowConversation}
-                  setShowStoreSearch={setShowStoreSearch}
-                  setShowMediaOptions={setShowMediaOptions}
-                  showMediaOptions={showMediaOptions}
-                  fileInputRef={fileInputRef}
-                  cameraInputRef={cameraInputRef}
-                  onTouchStart={onTouchStart}
-                  onTouchEnd={onTouchEnd}
-                />
-              )}
+                  <HeroCarousel
+                    carouselSlides={carouselSlides}
+                    carouselIndex={carouselIndex}
+                    setCarouselIndex={setCarouselIndex}
+                    isListening={isListening}
+                    toggleListening={toggleListening}
+                    setShowConversation={setShowConversation}
+                    setShowStoreSearch={setShowStoreSearch}
+                    setShowMediaOptions={setShowMediaOptions}
+                    showMediaOptions={showMediaOptions}
+                    fileInputRef={fileInputRef}
+                    cameraInputRef={cameraInputRef}
+                  />
+                )}
               {/* Start show store search when the user click on browse button */}
               {showStoreSearch && !selectedStore && (
                 <StoreSearch
@@ -1424,7 +1675,58 @@ export default function HomeScreen() {
                 />
               )}
               {/* End show store search when the user click on browse button */}
+              {selectedStore && (<Header
+                selectedStore={selectedStore}
+                onSetSelectedStore={setSelectedStore}
+                onSetShowConversation={setShowConversation}
+                onSetShowCatalog={setShowCatalog}
+              />)}
+              {selectedStore && (
+                <HeaderTabs
+                  selectedStore={selectedStore}
+                  currentTab={currentTab}
+                  onSetCurrentTab={setCurrentTab}
+                  onGetCartCount={getCartCount}
+                />
+              )}
+              {/* Catalog Tab */}
+              {currentTab === "catalog" && selectedStore && (
+                <Catalogs
+                  selectedStore={selectedStore}
+                  catalog={selectedStoreCatalog}
+                  cart={cart}
+                  currentTab={currentTab}
+                  catalogSearchQuery={catalogSearchQuery}
+                  selectedCategory={selectedCategory}
+                  selectedBrands={selectedBrands}
+                  showBrandDropdown={showBrandDropdown}
+                  onSetCatalogSearchQuery={setCatalogSearchQuery}
+                  onSetSelectedCategory={setSelectedCategory}
+                  onSetSelectedBrands={setSelectedBrands}
+                  onSetShowBrandDropdown={setShowBrandDropdown}
+                  onAddToCart={(item: Product, variantIndex: number) => addToCart(item, variantIndex)}
+                  onRemoveFromCart={(itemId: number, variantId: number, storeId?: number) => removeFromCart(itemId, variantId, storeId)}
+                />
+              )}
 
+              {/* Cart Tab */}
+              {currentTab === "cart" && (
+                <Cart
+                  selectedStore={selectedStore}
+                  currentTab={currentTab}
+                  cart={cart}
+                  stores={stores}
+                  selectedPaymentMethod={selectedPaymentMethod}
+                  fulfillmentType={fulfillmentType}
+                  onSetShowCheckoutPaymentModal={setShowCheckoutPaymentModal}
+                  onSetFulfillmentType={setFulfillmentType}
+                  onAddToCart={addToCart2}
+                  onRemoveFromCart={removeFromCart}
+                  onGetCartCount={getCartCount}
+                  onGetTotalPrice={getTotalPrice}
+                  onHandleCheckout={handleCheckout} 
+                />
+              )}
               {showConversation && (
                 <ChatPanel
                   messages={messages}
@@ -1446,7 +1748,6 @@ export default function HomeScreen() {
                   selectedPaymentMethod={selectedPaymentMethod}
                   fulfillmentType={fulfillmentType}
                   recommendationQuantities={recommendationQuantities}
-                  
                   onSetMessages={setMessages}
                   onSetInputText={setInputText}
                   onSetCurrentTab={setCurrentTab}
@@ -1466,13 +1767,12 @@ export default function HomeScreen() {
                   onSetRecommendationQuantities={setRecommendationQuantities}
                   onSetCart={setCart}
                   onSetFulfillmentType={setFulfillmentType}
-                  
                   onInputChange={handleInputChange}
                   onSendMessage={handleSendMessage}
                   onImageUpload={handleImageUpload}
                   onToggleListening={toggleListening}
                   onSelectSuggestion={selectSuggestion}
-                  onAddToCart={addToCart}
+                  onAddToCart={(item: Product, variantIndex: number) => addToCart(item, variantIndex)}
                   onRemoveFromCart={removeFromCart}
                   onHandleSelectRecommendation={handleSelectRecommendation}
                   onGetCartCount={getCartCount}
@@ -1481,7 +1781,7 @@ export default function HomeScreen() {
                 />
               )}
 
-              {showCatalog && selectedStore && !showConversation && (
+              {/* {showCatalog && selectedStore && !showConversation && (
                 <Catalog
                   store={selectedStore}
                   catalog={selectedStoreCatalog}
@@ -1492,7 +1792,7 @@ export default function HomeScreen() {
                     return item ? item.quantity : 0;
                   }}
                 />
-              )}
+              )} */}
             </div>
           </div>
 
@@ -1512,7 +1812,10 @@ export default function HomeScreen() {
             !showStoreSearch &&
             !selectedStore &&
             !showCatalog && (
-              <RecentOrders orders={orders} handleSelectStore={handleSelectStore} />
+              <RecentOrders
+                orders={orders}
+                handleSelectStore={handleSelectStore}
+              />
             )}
         </div>
       </div>
