@@ -62,7 +62,7 @@ const StoreSearch: React.FC<StoreSearchProps> = ({
       </div>
 
       <div className="bg-white/5 rounded-2xl p-4 h-96 overflow-y-auto space-y-3">
-        {filteredStores.map((store) => (
+        {filteredStores && filteredStores.map((store) => (
           <button
             key={store.id}
             onClick={() => handleSelectStore(store)}
@@ -86,7 +86,7 @@ const StoreSearch: React.FC<StoreSearchProps> = ({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {store.popular.map((item: string, idx: number) => (
+                  {store.popular && store.popular.map((item: string, idx: number) => (
                     <span
                       key={idx}
                       className="text-xs bg-green-500/20 text-green-200 px-2 py-1 rounded-full"

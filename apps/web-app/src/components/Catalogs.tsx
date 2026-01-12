@@ -86,6 +86,7 @@ export default function Catalogs({
   onRemoveFromCart,
   onAddToCart,
 }: CatalogProps) {
+  
   return (
     <div className="w-full mt-6">
       {/* Catalog Tab */}
@@ -225,16 +226,16 @@ export default function Catalogs({
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-white font-semibold text-sm mb-1 truncate">
-                            {variant.name}
+                            {item.name}
                           </h4>
                           {item.brand && (
                             <p className="text-gray-400 text-xs mb-1">
                               {item.brand}
                             </p>
                           )}
-                          {variant.quantity && (
+                          {variant.name && (
                             <p className="text-gray-300 text-xs mb-1">
-                              {variant.quantity}
+                              {variant.name}
                             </p>
                           )}
                           <p className="text-blue-200 text-xs mb-1">

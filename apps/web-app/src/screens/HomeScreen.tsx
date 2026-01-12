@@ -23,6 +23,7 @@ import RecentlyVisitedStores from "../components/RecentlyVisitedStores";
 import RecentOrders from "../components/RecentOrders";
 import { useFetchCategories } from "../../hooks/useCategoryQuery";
 import { useFetchStoresByCategory } from "../../hooks/useStoresQuery";
+import { useFetchStoreSkusByStoreId } from "../../hooks/useStoreSkusQuery";
 import HeaderTabs from "../components/HeaderTabs";
 import Header from "../components/Header";
 import Cart from "../components/Cart";
@@ -72,12 +73,17 @@ type CartItem = {
   variant: { id: number; name: string; price: number, quantity: number };
 };
 export default function HomeScreen() {
-  const { data: categories, isLoading: categoriesLoading } =
+
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState<number>(0);
+  const { data: categories = [], isLoading: categoriesLoading } =
     useFetchCategories();
+   
 
-  const { data: storess, isLoading: storesLoading } =
-    useFetchStoresByCategory(1);
+  const { data: stores, isLoading: storesLoading } =
+    useFetchStoresByCategory(!categoriesLoading ? categories[carouselIndex]?.id : 0);
 
+  
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
   const [deliveryAddress, setDeliveryAddress] = useState<string>(
     "123 Main Street, Apt 4B, New York, NY 10001"
@@ -161,6 +167,9 @@ export default function HomeScreen() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+
+  const {data: storeSkus, isLoading: storeSkusLoading} = useFetchStoreSkusByStoreId(selectedStore ? selectedStore.id : 0);
 
   const carouselSlides = categoriesLoading ? [] : categories;
   // [
@@ -430,357 +439,320 @@ export default function HomeScreen() {
     }
   };
 
-  const stores = [
-    {
-      id: 1,
-      name: "Fresh Mart",
-      category: "Supermarket",
-      rating: 4.5,
-      distance: "0.3 km",
-      image: "🛒",
-      popular: ["Milk", "Bread", "Eggs"],
-    },
-    {
-      id: 2,
-      name: "Green Valley Organics",
-      category: "Organic Store",
-      rating: 4.8,
-      distance: "0.7 km",
-      image: "🥬",
-      popular: ["Organic Veggies", "Fruits", "Grains"],
-    },
-    {
-      id: 3,
-      name: "QuickStop Grocery",
-      category: "Convenience Store",
-      rating: 4.3,
-      distance: "0.2 km",
-      image: "🏪",
-      popular: ["Snacks", "Drinks", "Daily Essentials"],
-    },
-    {
-      id: 4,
-      name: "Pizza Palace",
-      category: "Restaurant",
-      rating: 4.6,
-      distance: "0.5 km",
-      image: "🍕",
-      popular: ["Pizza", "Burgers", "Pasta"],
-    },
-  ];
+  
 
   // Store catalogs mapping
-  const storeCatalogs: { [storeId: number]: Product[] } = {
-    1: [
-      {
-        id: 1,
-        name: "Whole Milk",
-        brand: "Well",
-        price: 3.99,
-        quantity: "1L",
-        category: "Dairy",
-        image: "🥛",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "1L" },
-          { id: 12, name: "500ml", price: 2.49, quantity: "500ml" }
-        ]
-      },
-      {
-        id: 2,
-        name: "White Bread",
-        brand: "Golden",
-        price: 2.49,
-        quantity: "500g",
-        category: "Bakery",
-        image: "🍞",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "500g" },
-        ]
-      },
-      {
-        id: 3,
-        name: "Farm Eggs (12)",
-        brand: "Happy Farm",
-        price: 4.99,
-        quantity: "12 pieces",
-        category: "Dairy",
-        image: "🥚",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "12 pieces" },
-        ]
-      },
-      {
-        id: 4,
-        name: "Cheddar Cheese",
-        brand: "Kraft",
-        price: 5.99,
-        quantity: "200g",
-        category: "Dairy",
-        image: "🧀",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "200g" },
-        ]
-      },
-      {
-        id: 5,
-        name: "Bananas",
-        brand: "Fresh",
-        price: 1.99,
-        quantity: "1 bunch",
-        category: "Fruits",
-        image: "🍌",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "1 bunch" },
-        ] 
-      },
-      {
-        id: 6,
-        name: "Apples",
-        brand: "Orchard",
-        price: 3.49,
-        quantity: "1kg",
-        category: "Fruits",
-        image: "🍎",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "1kg" },
-        ]
-      },
-    ],
-    2: [
-      {
-        id: 1,
-        name: "Organic Spinach",
-        brand: "GreenLeaf",
-        price: 3.99,
-        quantity: "200g",
-        category: "Vegetables",
-        image: "🥬",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "200g" },
-        ]
-      },
-      {
-        id: 2,
-        name: "Organic Tomatoes",
-        brand: "Nature's Best",
-        price: 4.49,
-        quantity: "500g",
-        category: "Vegetables",
-        image: "🍅",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "500g" },
-        ]
-      },
-      {
-        id: 3,
-        name: "Organic Carrots",
-        brand: "Farm Fresh",
-        price: 2.99,
-        quantity: "300g",
-        category: "Vegetables",
-        image: "🥕",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "300g" },
-        ]
-      },
-      {
-        id: 4,
-        name: "Organic Blueberries",
-        brand: "BerryPure",
-        price: 5.99,
-        quantity: "150g",
-        category: "Fruits",
-        image: "🫐",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "150g" },
-        ]
-      },
-      {
-        id: 5,
-        name: "Quinoa",
-        brand: "NaturalHarvest",
-        price: 6.99,
-        quantity: "400g",
-        category: "Grains",
-        image: "🌾",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "400g" },
-        ]
-      },
-      {
-        id: 6,
-        name: "Organic Honey",
-        brand: "HoneyGold",
-        price: 8.99,
-        quantity: "500ml",
-        category: "Pantry",
-        image: "🍯",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "500ml" },
-        ]
-      },
-    ],
-    3: [
-      {
-        id: 1,
-        name: "Potato Chips",
-        brand: "CrispyBites",
-        price: 2.99,
-        quantity: "150g",
-        category: "Snacks",
-        image: "🥔",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "150g" },
-        ]
-      },
-      {
-        id: 2,
-        name: "Cola (2L)",
-        brand: "CoolBeverage",
-        price: 2.49,
-        quantity: "2L",
-        category: "Drinks",
-        image: "🥤",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "2L" },
-        ]
-      },
-      {
-        id: 3,
-        name: "Orange Juice",
-        brand: "FreshPress",
-        price: 3.99,
-        quantity: "1L",
-        category: "Drinks",
-        image: "🍊",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "1L" },
-        ]
-      },
-      {
-        id: 4,
-        name: "Chocolate Bar",
-        brand: "SweetTreats",
-        price: 1.99,
-        quantity: "50g",
-        category: "Snacks",
-        image: "🍫",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "50g" },
-        ]
-      },
-      {
-        id: 5,
-        name: "Ice Cream",
-        brand: "FrostyCold",
-        price: 5.49,
-        quantity: "500ml",
-        category: "Frozen",
-        image: "🍦",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "500ml" },
-        ]
-      },
-      {
-        id: 6,
-        name: "Coffee",
-        brand: "BrewMaster",
-        price: 7.99,
-        quantity: "250g",
-        category: "Pantry",
-        image: "☕",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "250g" },
-        ]
-      },
-      {
-        id: 7,
-        name: "Whole Milk",
-        brand: "Well",
-        price: 1.99,
-        quantity: "1L",
-        category: "Dairy",
-        image: "🥛",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "1L" },
-        ]
-      },
-    ],
-    4: [
-      {
-        id: 1,
-        name: "Margherita Pizza",
-        brand: "Authentic",
-        price: 12.99,
-        quantity: "Large",
-        category: "Pizza",
-        image: "🍕",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "Large" },
-        ]
-      },
-      {
-        id: 2,
-        name: "Pepperoni Pizza",
-        brand: "Authentic",
-        price: 14.99,
-        quantity: "Large",
-        category: "Pizza",
-        image: "🍕",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "Large" },
-        ]
-      },
-      {
-        id: 3,
-        name: "Veggie Burger",
-        brand: "HealthyBite",
-        price: 8.99,
-        quantity: "Single",
-        category: "Burgers",
-        image: "🍔",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "Single" },
-        ]
-      },
-      {
-        id: 4,
-        name: "Classic Burger",
-        brand: "HealthyBite",
-        price: 9.99,
-        quantity: "Single",
-        category: "Burgers",
-        image: "🍔",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "Single" },
-        ]
-      },
-      {
-        id: 5,
-        name: "Spaghetti Carbonara",
-        brand: "ItalianChef",
-        price: 11.99,
-        quantity: "1 Plate",
-        category: "Pasta",
-        image: "🍝",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "1 Plate" },
-        ]
-      },
-      {
-        id: 6,
-        name: "Garlic Bread",
-        brand: "FreshBake",
-        price: 4.99,
-        quantity: "6 pieces",
-        category: "Sides",
-        image: "🥖",
-        variants: [
-          { id: 11, name: "2L", price: 6.99, quantity: "6 pieces" },
-        ]
-      },
-    ],
-  };
+  // const storeSkus: { [storeId: number]: Product[] } = {
+  //   1: [
+  //     {
+  //       id: 1,
+  //       name: "Whole Milk",
+  //       brand: "Well",
+  //       price: 3.99,
+  //       quantity: "1L",
+  //       category: "Dairy",
+  //       image: "🥛",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "1L" },
+  //         { id: 12, name: "500ml", price: 2.49, quantity: "500ml" }
+  //       ]
+  //     },
+  //     {
+  //       id: 2,
+  //       name: "White Bread",
+  //       brand: "Golden",
+  //       price: 2.49,
+  //       quantity: "500g",
+  //       category: "Bakery",
+  //       image: "🍞",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "500g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 3,
+  //       name: "Farm Eggs (12)",
+  //       brand: "Happy Farm",
+  //       price: 4.99,
+  //       quantity: "12 pieces",
+  //       category: "Dairy",
+  //       image: "🥚",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "12 pieces" },
+  //       ]
+  //     },
+  //     {
+  //       id: 4,
+  //       name: "Cheddar Cheese",
+  //       brand: "Kraft",
+  //       price: 5.99,
+  //       quantity: "200g",
+  //       category: "Dairy",
+  //       image: "🧀",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "200g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 5,
+  //       name: "Bananas",
+  //       brand: "Fresh",
+  //       price: 1.99,
+  //       quantity: "1 bunch",
+  //       category: "Fruits",
+  //       image: "🍌",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "1 bunch" },
+  //       ] 
+  //     },
+  //     {
+  //       id: 6,
+  //       name: "Apples",
+  //       brand: "Orchard",
+  //       price: 3.49,
+  //       quantity: "1kg",
+  //       category: "Fruits",
+  //       image: "🍎",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "1kg" },
+  //       ]
+  //     },
+  //   ],
+  //   2: [
+  //     {
+  //       id: 1,
+  //       name: "Organic Spinach",
+  //       brand: "GreenLeaf",
+  //       price: 3.99,
+  //       quantity: "200g",
+  //       category: "Vegetables",
+  //       image: "🥬",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "200g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 2,
+  //       name: "Organic Tomatoes",
+  //       brand: "Nature's Best",
+  //       price: 4.49,
+  //       quantity: "500g",
+  //       category: "Vegetables",
+  //       image: "🍅",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "500g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 3,
+  //       name: "Organic Carrots",
+  //       brand: "Farm Fresh",
+  //       price: 2.99,
+  //       quantity: "300g",
+  //       category: "Vegetables",
+  //       image: "🥕",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "300g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 4,
+  //       name: "Organic Blueberries",
+  //       brand: "BerryPure",
+  //       price: 5.99,
+  //       quantity: "150g",
+  //       category: "Fruits",
+  //       image: "🫐",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "150g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 5,
+  //       name: "Quinoa",
+  //       brand: "NaturalHarvest",
+  //       price: 6.99,
+  //       quantity: "400g",
+  //       category: "Grains",
+  //       image: "🌾",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "400g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 6,
+  //       name: "Organic Honey",
+  //       brand: "HoneyGold",
+  //       price: 8.99,
+  //       quantity: "500ml",
+  //       category: "Pantry",
+  //       image: "🍯",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "500ml" },
+  //       ]
+  //     },
+  //   ],
+  //   3: [
+  //     {
+  //       id: 1,
+  //       name: "Potato Chips",
+  //       brand: "CrispyBites",
+  //       price: 2.99,
+  //       quantity: "150g",
+  //       category: "Snacks",
+  //       image: "🥔",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "150g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 2,
+  //       name: "Cola (2L)",
+  //       brand: "CoolBeverage",
+  //       price: 2.49,
+  //       quantity: "2L",
+  //       category: "Drinks",
+  //       image: "🥤",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "2L" },
+  //       ]
+  //     },
+  //     {
+  //       id: 3,
+  //       name: "Orange Juice",
+  //       brand: "FreshPress",
+  //       price: 3.99,
+  //       quantity: "1L",
+  //       category: "Drinks",
+  //       image: "🍊",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "1L" },
+  //       ]
+  //     },
+  //     {
+  //       id: 4,
+  //       name: "Chocolate Bar",
+  //       brand: "SweetTreats",
+  //       price: 1.99,
+  //       quantity: "50g",
+  //       category: "Snacks",
+  //       image: "🍫",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "50g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 5,
+  //       name: "Ice Cream",
+  //       brand: "FrostyCold",
+  //       price: 5.49,
+  //       quantity: "500ml",
+  //       category: "Frozen",
+  //       image: "🍦",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "500ml" },
+  //       ]
+  //     },
+  //     {
+  //       id: 6,
+  //       name: "Coffee",
+  //       brand: "BrewMaster",
+  //       price: 7.99,
+  //       quantity: "250g",
+  //       category: "Pantry",
+  //       image: "☕",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "250g" },
+  //       ]
+  //     },
+  //     {
+  //       id: 7,
+  //       name: "Whole Milk",
+  //       brand: "Well",
+  //       price: 1.99,
+  //       quantity: "1L",
+  //       category: "Dairy",
+  //       image: "🥛",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "1L" },
+  //       ]
+  //     },
+  //   ],
+  //   4: [
+  //     {
+  //       id: 1,
+  //       name: "Margherita Pizza",
+  //       brand: "Authentic",
+  //       price: 12.99,
+  //       quantity: "Large",
+  //       category: "Pizza",
+  //       image: "🍕",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "Large" },
+  //       ]
+  //     },
+  //     {
+  //       id: 2,
+  //       name: "Pepperoni Pizza",
+  //       brand: "Authentic",
+  //       price: 14.99,
+  //       quantity: "Large",
+  //       category: "Pizza",
+  //       image: "🍕",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "Large" },
+  //       ]
+  //     },
+  //     {
+  //       id: 3,
+  //       name: "Veggie Burger",
+  //       brand: "HealthyBite",
+  //       price: 8.99,
+  //       quantity: "Single",
+  //       category: "Burgers",
+  //       image: "🍔",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "Single" },
+  //       ]
+  //     },
+  //     {
+  //       id: 4,
+  //       name: "Classic Burger",
+  //       brand: "HealthyBite",
+  //       price: 9.99,
+  //       quantity: "Single",
+  //       category: "Burgers",
+  //       image: "🍔",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "Single" },
+  //       ]
+  //     },
+  //     {
+  //       id: 5,
+  //       name: "Spaghetti Carbonara",
+  //       brand: "ItalianChef",
+  //       price: 11.99,
+  //       quantity: "1 Plate",
+  //       category: "Pasta",
+  //       image: "🍝",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "1 Plate" },
+  //       ]
+  //     },
+  //     {
+  //       id: 6,
+  //       name: "Garlic Bread",
+  //       brand: "FreshBake",
+  //       price: 4.99,
+  //       quantity: "6 pieces",
+  //       category: "Sides",
+  //       image: "🥖",
+  //       variants: [
+  //         { id: 11, name: "2L", price: 6.99, quantity: "6 pieces" },
+  //       ]
+  //     },
+  //   ],
+  // };
 
   const [filteredStores, setFilteredStores] = useState(stores);
 
@@ -1344,10 +1316,9 @@ export default function HomeScreen() {
     const fullStore = stores.find((s) => s.id === store.id) || store;
 
     // Load the catalog for the selected store
-    const catalog = storeCatalogs[fullStore.id] || [];
-
+    
     setSelectedStore(fullStore);
-    setSelectedStoreCatalog(catalog);
+    
     setShowStoreSearch(false);
     setSelectedCategory("All");
     setSelectedBrands(new Set(["All"]));
@@ -1548,12 +1519,21 @@ export default function HomeScreen() {
 
   // carouselRef, carouselIndex, carouselSlides, getCartCount(),
   // isListening, toggleListening, setShowConversation, setShowMediaOptions
-  const carouselRef = useRef<HTMLDivElement | null>(null);
-  const [carouselIndex, setCarouselIndex] = useState<number>(0);
+  
 
   useEffect(() => {
-    console.log("data loaded", storess);
-  }, []);
+    if (storesLoading) return;
+    console.log("stores loaded", stores);
+    setFilteredStores(stores);
+  }, [storesLoading]);
+
+  useEffect(() => {
+    if (storeSkusLoading) return;
+    console.log("skus loaded", storeSkus);
+    setSelectedStoreCatalog(storeSkus || []);
+  }, [storeSkusLoading]);
+
+  // const catalog = storeSkus[fullStore.id] || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
@@ -1822,3 +1802,5 @@ export default function HomeScreen() {
     </div>
   );
 }
+
+
