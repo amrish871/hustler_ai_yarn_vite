@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const authToken = localStorage.getItem('voiceAI_authToken')
+  const authToken = localStorage.getItem('authToken')
   
   if (!authToken) {
     return <Navigate to="/" replace />

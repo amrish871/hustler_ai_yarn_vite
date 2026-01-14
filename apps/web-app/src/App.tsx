@@ -11,6 +11,7 @@ import AddressManagement from './screens/AddressManagement'
 import Orders from './screens/Orders'
 import Transactions from './screens/Transactions'
 import Subscriptions from './screens/Subscriptions'
+import Profile from './screens/Profile'
 import { AuthProvider } from '@myorg/auth'
 import queryClient from '../src/queries/queryClient'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -48,6 +49,7 @@ const AppContent = ({ language, onLanguageChange }: { language: Language; onLang
       <Route path="/" element={<AuthLayout title={t(language, 'login')} subtitle={t(language, 'login_subtitle')}><Login language={language} /></AuthLayout>} />
       <Route path="/login" element={<AuthLayout title={t(language, 'login')} subtitle={t(language, 'login_subtitle')}><Login language={language} /></AuthLayout>} />
       <Route path="/home" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><HomeScreen /></ProtectedLayout></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><Profile language={language} /></ProtectedLayout></ProtectedRoute>} />
       <Route path="/manage-addresses" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><AddressManagement language={language} /></ProtectedLayout></ProtectedRoute>} />
       <Route path="/orders" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><Orders /></ProtectedLayout></ProtectedRoute>} />
       <Route path="/transactions" element={<ProtectedRoute><ProtectedLayout language={language} onLanguageChange={onLanguageChange}><Transactions /></ProtectedLayout></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowLeft } from 'lucide-react';
+import { MapPin, ArrowLeft, Edit2, Trash2, Plus } from 'lucide-react';
 
 import { Language } from '../translations';
 interface Address {
@@ -19,10 +19,12 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
   const navigate = useNavigate();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [newAddress, setNewAddress] = useState<Partial<Address>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   // Load addresses from localStorage on mount
   useEffect(() => {
-    const savedAddresses = localStorage.getItem('voiceAI_addresses');
+    const savedAddresses = localStorage.getItem('addresses');
     if (savedAddresses) {
       setAddresses(JSON.parse(savedAddresses));
     }
@@ -30,7 +32,7 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
 
   // Save addresses to localStorage
   useEffect(() => {
-    localStorage.setItem('voiceAI_addresses', JSON.stringify(addresses));
+    localStorage.setItem('addresses', JSON.stringify(addresses));
   }, [addresses]);
 
   const addAddress = (addr: Partial<Address>) => {
@@ -38,19 +40,42 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
       alert('Please fill in address label and street address');
       return;
     }
-    const a: Address = {
-      id: `addr-${Date.now()}`,
-      line1: addr.line1 || '',
-      line2: addr.line2,
-      city: addr.city,
-      state: addr.state,
-      postalCode: addr.postalCode,
-      country: addr.country,
-      label: addr.label || 'Home',
-      isDefault: addresses.length === 0,
-    };
-    setAddresses(prev => [...prev, a]);
+    
+    if (editingId) {
+      // Update existing address
+      setAddresses(prev => prev.map(a => 
+        a.id === editingId 
+          ? {
+              ...a,
+              label: addr.label || a.label,
+              line1: addr.line1 || a.line1,
+              line2: addr.line2,
+              city: addr.city,
+              state: addr.state,
+              postalCode: addr.postalCode,
+              country: addr.country,
+            }
+          : a
+      ));
+      setEditingId(null);
+    } else {
+      // Add new address
+      const a: Address = {
+        id: `addr-${Date.now()}`,
+        line1: addr.line1 || '',
+        line2: addr.line2,
+        city: addr.city,
+        state: addr.state,
+        postalCode: addr.postalCode,
+        country: addr.country,
+        label: addr.label || 'Home',
+        isDefault: addresses.length === 0,
+      };
+      setAddresses(prev => [...prev, a]);
+    }
+    
     setNewAddress({});
+    setShowForm(false);
   };
 
   const setDefaultAddress = (id: string) => {
@@ -59,6 +84,18 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
 
   const deleteAddress = (id: string) => {
     setAddresses(prev => prev.filter(a => a.id !== id));
+  };
+
+  const editAddress = (addr: Address) => {
+    setNewAddress(addr);
+    setEditingId(addr.id);
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setNewAddress({});
+    setEditingId(null);
+    setShowForm(false);
   };
 
   const useCurrentLocation = async () => {
@@ -94,9 +131,9 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
+      <div className="w-full max-w-5xl">
         <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
@@ -106,114 +143,164 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
               </button>
               <h2 className="text-2xl font-bold text-white">{language ? (language === 'hi' ? 'पते प्रबंधित करें' : 'Manage Addresses') : 'Manage Addresses'}</h2>
             </div>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all"
+            >
+              <Plus className="w-5 h-5" />
+              {language === 'hi' ? 'जोड़ें' : 'Add Address'}
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Existing Addresses */}
-            <div>
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                {language === 'hi' ? 'आपके पते' : 'Your Addresses'}
-              </h3>
-              {addresses.length === 0 ? (
-                <p className="text-white/50 text-sm">{language === 'hi' ? 'अभी तक कोई पता नहीं' : 'No addresses yet'}</p>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {addresses.map(addr => (
-                    <div key={addr.id} className="bg-white/10 p-4 rounded-lg border border-white/20">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <div className="text-white font-semibold">{addr.label}</div>
-                          <div className="text-white/80 text-sm mt-1">{addr.line1}</div>
-                          {addr.city && (
-                            <div className="text-white/80 text-sm">
-                              {addr.city}
-                              {addr.state ? `, ${addr.state}` : ''}
-                            </div>
-                          )}
-                          {addr.postalCode && (
-                            <div className="text-white/70 text-xs mt-1">{addr.postalCode}</div>
+          {/* Addresses List */}
+          <div className="mb-8">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2 text-lg">
+              <MapPin className="w-5 h-5 text-blue-400" />
+              {language === 'hi' ? 'आपके पते' : 'Your Addresses'}
+            </h3>
+            {addresses.length === 0 ? (
+              <div className="text-center py-12">
+                <MapPin className="w-12 h-12 text-white/30 mx-auto mb-3" />
+                <p className="text-white/50 text-sm">{language === 'hi' ? 'अभी तक कोई पता नहीं। नीचे एक पता जोड़ें।' : 'No addresses yet. Add one below.'}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {addresses.map(addr => (
+                  <div key={addr.id} className="bg-white/10 p-5 rounded-xl border border-white/20 hover:border-white/40 transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-white font-semibold text-lg">{addr.label}</h4>
+                          {addr.isDefault && (
+                            <span className="text-xs bg-green-500/40 text-green-300 px-2 py-0.5 rounded whitespace-nowrap font-medium">
+                              Default
+                            </span>
                           )}
                         </div>
-                        {addr.isDefault && (
-                          <span className="text-xs bg-green-500/30 text-green-300 px-2 py-1 rounded whitespace-nowrap ml-2">
-                            Default
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {!addr.isDefault && (
-                          <button
-                            onClick={() => setDefaultAddress(addr.id)}
-                            className="flex-1 px-3 py-1 bg-blue-600/50 hover:bg-blue-600 text-white rounded text-sm transition-all"
-                          >
-                            Set as Default
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteAddress(addr.id)}
-                          className="flex-1 px-3 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded text-sm transition-all"
-                        >
-                          Delete
-                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="text-white/80 text-sm">{addr.line1}</div>
+                      {addr.line2 && (
+                        <div className="text-white/80 text-sm">{addr.line2}</div>
+                      )}
+                      {(addr.city || addr.state || addr.postalCode) && (
+                        <div className="text-white/70 text-sm">
+                          {[addr.city, addr.state, addr.postalCode].filter(Boolean).join(', ')}
+                        </div>
+                      )}
+                    </div>
 
-            {/* Add New Address Form */}
-            <div>
-              <h3 className="text-white font-semibold mb-4">{language === 'hi' ? 'नया पता जोड़ें' : 'Add New Address'}</h3>
-              <div className="bg-white/10 p-4 rounded-lg space-y-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => editAddress(addr)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600/50 hover:bg-blue-600 text-white rounded-lg text-sm transition-all font-medium"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        {language === 'hi' ? 'संपादित करें' : 'Edit'}
+                      </button>
+                      {!addr.isDefault && (
+                        <button
+                          onClick={() => setDefaultAddress(addr.id)}
+                          className="flex-1 px-3 py-2 bg-purple-600/50 hover:bg-purple-600 text-white rounded-lg text-sm transition-all font-medium"
+                        >
+                          {language === 'hi' ? 'डिफ़ॉल्ट' : 'Set Default'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteAddress(addr.id)}
+                        className="flex items-center justify-center px-3 py-2 bg-red-600/50 hover:bg-red-600 text-white rounded-lg text-sm transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add/Edit Address Form */}
+          {showForm && (
+            <div className="bg-white/10 p-6 rounded-xl border border-white/20">
+              <h3 className="text-white font-semibold mb-4 text-lg">
+                {editingId ? (language === 'hi' ? 'पता संपादित करें' : 'Edit Address') : (language === 'hi' ? 'नया पता जोड़ें' : 'Add New Address')}
+              </h3>
+              <div className="space-y-3">
                 <input
-                  className="w-full px-3 py-2 rounded bg-white/10 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="Address label (e.g., Home, Office)"
+                  className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder={language === 'hi' ? 'पता लेबल (जैसे, घर, कार्यालय)' : 'Address label (e.g., Home, Office)'}
                   value={newAddress.label || ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, label: e.target.value }))}
                 />
                 <input
-                  className="w-full px-3 py-2 rounded bg-white/10 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="Street address"
+                  className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder={language === 'hi' ? 'सड़क का पता' : 'Street address'}
                   value={newAddress.line1 || ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, line1: e.target.value }))}
                 />
                 <input
-                  className="w-full px-3 py-2 rounded bg-white/10 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="City"
-                  value={newAddress.city || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, city: e.target.value }))}
+                  className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder={language === 'hi' ? 'अपार्टमेंट/यूनिट (वैकल्पिक)' : 'Apartment/Unit (Optional)'}
+                  value={newAddress.line2 || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, line2: e.target.value }))}
                 />
-                <input
-                  className="w-full px-3 py-2 rounded bg-white/10 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="State"
-                  value={newAddress.state || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, state: e.target.value }))}
-                />
-                <input
-                  className="w-full px-3 py-2 rounded bg-white/10 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="Postal code"
-                  value={newAddress.postalCode || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, postalCode: e.target.value }))}
-                />
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder={language === 'hi' ? 'शहर' : 'City'}
+                    value={newAddress.city || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, city: e.target.value }))}
+                  />
+                  <input
+                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder={language === 'hi' ? 'राज्य' : 'State'}
+                    value={newAddress.state || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, state: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder={language === 'hi' ? 'पिन कोड' : 'Postal code'}
+                    value={newAddress.postalCode || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, postalCode: e.target.value }))}
+                  />
+                  <input
+                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder={language === 'hi' ? 'देश' : 'Country'}
+                    value={newAddress.country || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, country: e.target.value }))}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
                   <button
                     onClick={useCurrentLocation}
-                    className="flex-1 px-3 py-2 bg-blue-600/50 hover:bg-blue-600 text-white rounded text-sm transition-all"
+                    className="flex-1 px-4 py-2 bg-indigo-600/50 hover:bg-indigo-600 text-white rounded-lg text-sm transition-all font-medium"
                   >
                     📍 {language === 'hi' ? 'वर्तमान स्थान उपयोग करें' : 'Use Current Location'}
                   </button>
+                </div>
+
+                <div className="flex gap-2 pt-4">
                   <button
                     onClick={() => addAddress(newAddress)}
-                    className="flex-1 px-3 py-2 bg-green-600/50 hover:bg-green-600 text-white rounded text-sm transition-all font-semibold"
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-all font-semibold"
                   >
-                    {language === 'hi' ? 'पता जोड़ें' : 'Add Address'}
+                    {editingId ? (language === 'hi' ? 'अपडेट करें' : 'Update') : (language === 'hi' ? 'पता जोड़ें' : 'Add Address')}
+                  </button>
+                  <button
+                    onClick={resetForm}
+                    className="flex-1 px-4 py-2 bg-gray-600/50 hover:bg-gray-600 text-white rounded-lg text-sm transition-all font-semibold"
+                  >
+                    {language === 'hi' ? 'रद्द करें' : 'Cancel'}
                   </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -20,6 +20,7 @@ import CheckoutPaymentModal from "../components/CheckoutPaymentModal";
 import StoreSearch from "../components/StoreSearch";
 import OrderConfirmation from "../components/OrderConfirmation";
 import RecentlyVisitedStores from "../components/RecentlyVisitedStores";
+import NearbyStores from "../components/NearbyStores";
 import RecentOrders from "../components/RecentOrders";
 import { useFetchCategories } from "../../hooks/useCategoryQuery";
 import { useFetchStoresByCategory } from "../../hooks/useStoresQuery";
@@ -28,6 +29,7 @@ import HeaderTabs from "../components/HeaderTabs";
 import Header from "../components/Header";
 import Cart from "../components/Cart";
 import Catalogs from "../components/Catalogs";
+import MetaLoadingSpinner from "../components/MetaLoadingSpinner";
 type Message = {
   text?: string;
   image?: string | null;
@@ -143,6 +145,7 @@ export default function HomeScreen() {
   const [recentlyVisitedStores, setRecentlyVisitedStores] = useState<Store[]>(
     []
   );
+  const [nearbyStores, setNearbyStores] = useState<Store[]>([]);
 
   // Cart context
   const { setCartCount, setOnCartClick } = useCart();
@@ -217,6 +220,13 @@ export default function HomeScreen() {
       setShowCheckout(true);
     });
   }, [cart, setCartCount, setOnCartClick]);
+
+  // Populate nearby stores based on current category stores
+  useEffect(() => {
+    if (stores && stores.length > 0) {
+      setNearbyStores(stores.slice(0, 8)); // Show first 8 stores as nearby
+    }
+  }, [stores]);
 
   // Get all products from all stores for the shopping assistant
   const getAllProducts = (): Product[] => {
@@ -1604,6 +1614,12 @@ export default function HomeScreen() {
       )}
       {/* End show Checkout Modal */}
 
+      {/* Meta-style Loading Spinner */}
+      <MetaLoadingSpinner 
+        visible={categoriesLoading || storesLoading} 
+        message={categoriesLoading ? 'Loading categories...' : 'Loading stores...'}
+      />
+
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
         <div className="w-full max-w-4xl">
           {/* Start Header with delivery address */}
@@ -1783,6 +1799,17 @@ export default function HomeScreen() {
             !showCatalog && (
               <RecentlyVisitedStores
                 recentlyVisitedStores={recentlyVisitedStores}
+                handleSelectStore={handleSelectStore}
+              />
+            )}
+
+          {/* Nearby Stores - Outside the main card */}
+          {!showConversation &&
+            !showStoreSearch &&
+            !selectedStore &&
+            !showCatalog && (
+              <NearbyStores
+                nearbyStores={nearbyStores}
                 handleSelectStore={handleSelectStore}
               />
             )}

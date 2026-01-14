@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react'
+import { Navigate } from 'react-router-dom'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -11,6 +12,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   title = 'Voice AI Assistant',
   subtitle = 'Speak or type to interact' 
 }) => {
+
+  const authToken = localStorage.getItem('authToken')
+  
+  if (authToken) {
+    return <Navigate to="/home" replace />
+  }
+  
   return (
     <div className="min-h-screen p-6 flex items-center justify-center bg-gradient-to-br from-purple-900 via-slate-900 to-blue-500">
       <div className="w-full max-w-md">

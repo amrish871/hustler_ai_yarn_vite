@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Language, t } from '../translations'
 import { useLogin, useVerifyLoginOTP } from '../../hooks/userLoginQuery'
 import { useAuth } from '@myorg/auth'
+import { json } from 'stream/consumers'
 
 
 const Login = ({ language = 'en' }: { language?: Language }) => {
@@ -68,6 +69,7 @@ const Login = ({ language = 'en' }: { language?: Language }) => {
         {
           onSuccess: data => {
             console.log('OTP sent successfully!', data)
+            // sentOtp(data)
           },
           onError: error => {
             // Handle error, e.g., show an alert
@@ -81,28 +83,37 @@ const Login = ({ language = 'en' }: { language?: Language }) => {
   };
 
   const handleVerifyOtp = () => {
-    setError(null)
-    if (otp.trim() === '' || otp !== sentOtp) {
+    setError(null);
+    if (otp.trim() === '') {
       setError(t(language, 'invalid_otp'))
       return
     }
+    
     (async () => {
       verifyOtp(
         { phone, otp }, // Payload
         {
           onSuccess: data => {
             console.log('OTP verified successfully!', data)
+            setStage('done')
+            const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            localStorage.setItem('authToken', data.token)
+            localStorage.setItem('user', JSON.stringify(data.user))
+            alert("helloworld")
+            setTimeout(() => navigate('/home'), 1000)
+            
           },
           onError: error => {
-            // Handle error, e.g., show an alert
+            // Handle e)rror, e.g., show an alert
             console.error('Error verifying OTP:', error)
+            setError(t(language, 'invalid_otp'))
           },
         },
       )
     })()
     setStage('done')
     const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    localStorage.setItem('voiceAI_authToken', token)
+    // localStorage.setItem('voiceAI_authToken', token)
     setTimeout(() => navigate('/home'), 600)
   }
 

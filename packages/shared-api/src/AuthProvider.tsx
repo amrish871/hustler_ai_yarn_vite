@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
 
   useEffect(() => {
     try {
-      debugger;
+      alert("hello")
       const saved = localStorage.getItem(AUTH_TOKEN_KEY);
       if (saved) setTokenState(saved);
     } catch (e) {
