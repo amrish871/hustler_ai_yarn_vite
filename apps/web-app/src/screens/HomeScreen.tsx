@@ -30,6 +30,8 @@ import Header from "../components/Header";
 import Cart from "../components/Cart";
 import Catalogs from "../components/Catalogs";
 import MetaLoadingSpinner from "../components/MetaLoadingSpinner";
+import { CartItems, CartItem } from "../screens/Home/Home.types";
+import { useQueryClient } from "@tanstack/react-query";
 type Message = {
   text?: string;
   image?: string | null;
@@ -64,16 +66,7 @@ type CartProduct = {
   image: string;
   variants?: { id: number; name: string; price: number, quantity: number }[];
 };
-type CartItem = {
-  storeId: number;
-  id: number;
-  name: string;
-  brand?: string;
-  price: number;
-  category: string;
-  image: string;
-  variant: { id: number; name: string; price: number, quantity: number };
-};
+
 export default function HomeScreen() {
 
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -110,7 +103,7 @@ export default function HomeScreen() {
     []
   );
   const [showCatalog, setShowCatalog] = useState<boolean>(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItems>({});
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(
@@ -214,12 +207,24 @@ export default function HomeScreen() {
 
   // Sync cart state with CartContext for navbar
   useEffect(() => {
-    const totalCartCount = cart.reduce((sum, item) => sum + item.variant.quantity, 0);
+    const totalCartCount = Object.values(cart).flatMap(items => items)
+    .reduce((sum, item) => sum + (item.variant?.quantity || 0), 0);
     setCartCount(totalCartCount);
+  
     setOnCartClick(() => () => {
       setShowCheckout(true);
     });
   }, [cart, setCartCount, setOnCartClick]);
+
+  const queryClient = useQueryClient();
+  useEffect(() => {
+  if (selectedStore) {
+    // Invalidate the previous store's data (optional - for cleanup)
+    queryClient.invalidateQueries({
+      queryKey: ["fetchStoreSkusByStoreId", selectedStore.id],
+    });
+  }
+}, [selectedStore]);
 
   // Populate nearby stores based on current category stores
   useEffect(() => {
@@ -1358,74 +1363,79 @@ export default function HomeScreen() {
     setShowConversation(true);
   };
 
+  // Line 1373-1401 should be:
   const addToCart = (item: Product, variantIndex: number) => {
-    debugger;
     if (!selectedStore) return;
-    const existing = cart.find((c) => 
-      c.storeId === selectedStore.id &&
-      c.id === item.id &&
-      c.variant.id === item.variants[variantIndex].id
-      );
-    if (existing) {
-      setCart(
-        cart.map((c) =>
-          c.storeId === selectedStore.id &&
-          c.id === item.id && 
-          c.variant.id === item.variants[variantIndex].id
-            ? { ...c, variant: { ...c.variant, quantity: c.variant.quantity + 1 } }
+    const storeCart = cart[selectedStore.id] || [];
+    const existing = storeCart.find(
+      (c) => c.id === item.id && c.variant.id === item.variants[variantIndex].id
+    );
+
+    const updatedStoreCart = existing
+      ? storeCart.map((c) =>
+          c.id === item.id && c.variant.id === item.variants[variantIndex].id
+            ? {
+                ...c,
+                variant: { ...c.variant, quantity: c.variant.quantity + 1 },
+              }
             : c
         )
-      );
-    } else {
-      setCart([
-        ...cart,
-        {
-          storeId: selectedStore.id,
-          id: item.id,
-          name: item.name,
-          brand: item.brand,
-          price: item.price,
-          category: item.category,
-          image: item.image,
-          variant: { 
-            id: item?.variants[variantIndex].id, 
-            name: item?.variants[variantIndex].name, 
-            price: item?.variants[variantIndex].price, 
-            quantity: 1
-          }
-        },
-      ]);
-    }
+      : [
+          ...storeCart,
+          {
+            storeId: selectedStore.id,
+            storeName: selectedStore.name,
+            id: item.id,
+            name: item.name,
+            brand: item.brand,
+            price: item.price,
+            category: item.category,
+            image: item.image,
+            variant: {
+              id: item.variants[variantIndex].id,
+              name: item.variants[variantIndex].name,
+              price: item.variants[variantIndex].price,
+              quantity: 1,
+            },
+          },
+        ];
+
+    setCart({
+      ...cart,
+      [selectedStore.id]: updatedStoreCart
+    });
   };
 
   const addToCart2 = (itemId: number, variantId: number, storeId?: number) => {
-    debugger;
     const targetStoreId = storeId || selectedStore?.id;
     if (!targetStoreId) return;
-    const existing = cart.find((c) => 
-      c.storeId === targetStoreId &&
-      c.id === itemId &&
-      c.variant.id === variantId
-      );
+    const storeCart = cart[targetStoreId] || [];
+    const existing = storeCart.find(
+      (c) => c.id === itemId && c.variant.id === variantId
+    );
     if (existing && existing.variant.quantity > 1) {
-      setCart(
-        cart.map((c) =>
-          c.storeId === targetStoreId &&
-          c.id === itemId &&
-          c.variant.id === variantId
-            ? { ...c, variant: { ...c.variant, quantity: c.variant.quantity + 1 } }
-            : c
-        )
+      const updatedStoreCart = storeCart.map((c) =>
+        c.id === itemId && c.variant.id === variantId
+          ? {
+              ...c,
+              variant: { ...c.variant, quantity: c.variant.quantity + 1 },
+            }
+          : c
       );
+
+      setCart({
+        ...cart,
+        [targetStoreId]: updatedStoreCart
+      });
     }
   };
 
   const removeFromCart = (itemId: number, variantId: number, storeId?: number) => {
     const targetStoreId = storeId || selectedStore?.id;
     if (!targetStoreId) return;
-
-    const existing = cart.find(
-      (c) => c.storeId === targetStoreId &&
+    const storeCart = cart[targetStoreId] || [];
+    const existing = storeCart.find(
+      (c) => 
       c.id === itemId&&
       c.variant.id === variantId
       );
@@ -1433,36 +1443,46 @@ export default function HomeScreen() {
     //   (c) => c.id === itemId && c.storeId === targetStoreId
     // );
     if (existing && existing.variant.quantity > 1) {
-      setCart(
-        cart.map((c) =>
-          c.id === itemId && c.storeId === targetStoreId
-            ? { ...c, variant: { ...c.variant, quantity: c.variant.quantity - 1 } }
-            : c
-        )
+      const updatedStoreCart = storeCart.map((c) =>
+        c.id === itemId && c.variant.id === variantId
+          ? {
+              ...c,
+              variant: { ...c.variant, quantity: c.variant.quantity + 1 },
+            }
+          : c
       );
+
+      setCart({
+        ...cart,
+        [targetStoreId]: updatedStoreCart
+      });
     } else {
-      setCart(
-        cart.filter((c) => !(c.id === itemId && c.storeId === targetStoreId))
-      );
+      setCart({
+        ...cart,
+        [targetStoreId]: storeCart.filter((c) => !(c.id === itemId && c.variant.id === variantId))
+      });
     }
   };
 
   const getTotalPrice = (storeId?: number) => {
     const targetStoreId = storeId || selectedStore?.id;
-    const subtotal = cart
-      .filter((c) => c.storeId === targetStoreId)
-      .reduce((sum, item) => sum + item.price * item.variant.quantity, 0);
+    if (!targetStoreId || !cart[targetStoreId]) return "0.00";
+    
+    const subtotal = cart[targetStoreId]
+      .reduce((sum, item) => sum + item.variant.price * item.variant.quantity, 0);
 
     // Add delivery charges if delivery is selected and order is less than $20
     const deliveryCharge =
       fulfillmentType === "delivery" && subtotal < 20 ? 5 : 0;
-
     return (subtotal + deliveryCharge).toFixed(2);
   };
-  const getCartCount = () =>
-    cart
-      .filter((c) => c.storeId === selectedStore?.id)
+  const getCartCount = () => {
+    if(!selectedStore) return 0;
+    const storeCart = cart[selectedStore?.id]
+    if(!storeCart) return 0;
+    return storeCart
       .reduce((sum, item) => sum + item.variant.quantity, 0);
+  }    
 
   const handleCheckout = (storeId: number) => {
     if (selectedPaymentMethod === "cod") {
@@ -1541,7 +1561,7 @@ export default function HomeScreen() {
     if (storeSkusLoading) return;
     console.log("skus loaded", storeSkus);
     setSelectedStoreCatalog(storeSkus || []);
-  }, [storeSkusLoading]);
+  }, [storeSkusLoading, selectedStore]);
 
   // const catalog = storeSkus[fullStore.id] || [];
 
@@ -1706,7 +1726,7 @@ export default function HomeScreen() {
               )}
 
               {/* Cart Tab */}
-              {currentTab === "cart" && (
+              {currentTab === "cart" && selectedStore && (
                 <Cart
                   selectedStore={selectedStore}
                   currentTab={currentTab}

@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { CartItems } from "../screens/Home/Home.types";
 import {
   Plus,
   Minus,
@@ -28,20 +29,11 @@ type Product = {
   variants: { id: number; name: string; price: number, quantity: string }[];
 };
 
-type CartItem = {
-  storeId: number;
-  id: number;
-  name: string;
-  brand?: string;
-  price: number;
-  category: string;
-  image: string;
-  variant: { id: number; name: string; price: number, quantity: number };
-};
+
 interface CartProps {
   selectedStore: Store | null;
   currentTab: "chat" | "catalog" | "cart";
-  cart: CartItem[];
+  cart: CartItems;
   stores: Store[];
   selectedPaymentMethod: string;
   fulfillmentType: 'delivery' | 'pickup';
@@ -79,13 +71,11 @@ export default function Cart({
           {onGetCartCount() > 0 ? (
             <>
               <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto mb-4 space-y-2">
-                {cart.map((cartItem) => {
-                  const store = stores.find((s) => s.id === cartItem.storeId);
-                  if (!store) return null;
-
+                { 
+                  selectedStore && cart[selectedStore.id].map((cartItem) => {
                   return (
                     <div
-                      key={`${cartItem.storeId}-${cartItem.id}`}
+                      key={`${cartItem.id}`}
                       className="bg-white/10 rounded-xl p-3 flex items-center gap-3"
                     >
                       <div className="text-3xl">{cartItem.image}</div>
@@ -93,14 +83,14 @@ export default function Cart({
                         <h4 className="text-white font-semibold text-sm">
                           {cartItem.name}
                         </h4>
-                        <p className="text-blue-300 text-xs mb-1">{store.name}</p>
+                        <p className="text-blue-300 text-xs mb-1">{selectedStore.name}</p>
                         <p className="text-green-300 font-bold text-sm">
                           ${cartItem.price} x {cartItem.variant.quantity}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => onRemoveFromCart(cartItem.id, cartItem.storeId)}
+                          onClick={() => onRemoveFromCart(cartItem.id, selectedStore.id)}
                           className="w-8 h-8 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
                         >
                           <Minus className="w-4 h-4 text-white" />
@@ -109,7 +99,7 @@ export default function Cart({
                           {cartItem.variant.quantity}
                         </span>
                         <button
-                          onClick={() => onAddToCart(cartItem.id, cartItem.variant.id, cartItem.storeId)}
+                          onClick={() => onAddToCart(cartItem.id, cartItem.variant.id, selectedStore.id)}
                           className="w-8 h-8 bg-green-500/30 hover:bg-green-500/50 rounded-full flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4 text-white" />
@@ -136,8 +126,7 @@ export default function Cart({
                 <span className="text-white/70 text-sm">Delivery Charges</span>
                 <span className="text-white font-semibold">
                   {fulfillmentType === "delivery" &&
-                  cart
-                    .filter((c) => c.storeId === selectedStore?.id)
+                  selectedStore && cart[selectedStore.id]
                     .reduce((sum, item) => sum + item.price * item.variant.quantity, 0) < 20
                     ? "$5.00"
                     : "FREE"}

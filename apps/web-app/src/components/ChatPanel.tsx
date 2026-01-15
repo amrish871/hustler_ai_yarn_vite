@@ -5,6 +5,8 @@ import {
   Image
 } from "lucide-react";
 
+import { CartItems } from "../screens/Home/Home.types";
+
 type Message = {
   text?: string;
   image?: string | null;
@@ -33,22 +35,13 @@ type Product = {
   variants: { id: number; name: string; price: number }[];
 };
 
-type CartItem = {
-  storeId: number;
-  id: number;
-  name: string;
-  brand?: string;
-  price: number;
-  category: string;
-  image: string;
-  variant: { id: number; name: string; price: number, quantity: number };
-};
+
 interface ChatPanelProps {
   messages: Message[];
   inputText: string;
   selectedStore: Store | null;
   currentTab: "chat" | "catalog" | "cart";
-  cart: CartItem[];
+  cart: CartItems;
   stores: Store[];
   suggestions: Product[];
   showSuggestions: boolean;

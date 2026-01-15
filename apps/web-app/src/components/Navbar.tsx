@@ -10,7 +10,7 @@ interface NavbarProps {
   onLanguageChange: (lang: Language) => void;
   orders?: any[];
   cartCount?: number;
-  onCartClick?: () => void;
+  onCartClick?: (() => void) | null;
 }
 
 export default function Navbar({ onMenuClick, user, language, onLanguageChange, orders = [], cartCount = 0, onCartClick }: NavbarProps) {
@@ -62,20 +62,20 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
           {/* Center: Cart & Profile */}
           <div className="flex items-center gap-6">
             {/* Cart Icon */}
-            {onCartClick && (
-              <button
-                onClick={onCartClick}
-                className="relative w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
-                title="Shopping Cart"
-              >
-                <ShoppingCart className="w-6 h-6 text-white" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-            )}
+            
+            <button
+              onClick={onCartClick}
+              className="relative w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
+              title="Shopping Cart"
+            >
+              <ShoppingCart className="w-6 h-6 text-white" />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+            
 
             {/* User Profile Button & Dropdown */}
             <div className="relative">

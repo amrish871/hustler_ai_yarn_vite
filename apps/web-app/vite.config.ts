@@ -7,6 +7,9 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ['chunk-QYIAN2Q4']
+  },
   resolve: {
     alias: {
       '@myorg/ui': path.resolve(__dirname, '../../packages/ui/src'),

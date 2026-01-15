@@ -22,9 +22,19 @@ export type Store = {
   popular: string[];
 };
 
-export type CartItem = Product & {
-  quantity: number;
-  storeId: number;
+export type CartItem = {
+    storeId: number;
+    storeName: string;
+    id: number;
+    name: string;
+    brand?: string;
+    price: number;
+    category: string;
+    image: string;
+    variant: { id: number; name: string; price: number; quantity: number };
+};
+export type CartItems = {
+  [storeId: number]: CartItem[];
 };
 
 export type Address = {

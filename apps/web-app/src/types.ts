@@ -25,7 +25,16 @@ export type StoreType = {
   catalog: CatalogItem[];
 };
 
-export type CartItem = CatalogItem & {
-  quantity: number;
-  storeId: number;
+type CartItem = {
+  [storeId: number]: [
+    {
+      id: number;
+      name: string;
+      brand?: string;
+      price: number;
+      category: string;
+      image: string;
+      variant: { id: number; name: string; price: number; quantity: number };
+    }
+  ];
 };

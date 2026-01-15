@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Grid,
 } from "lucide-react";
-import Cart from "./Cart";
+import { CartItems, CartItem } from "../screens/Home/Home.types";
+
 
 type Message = {
   text?: string;
@@ -42,16 +43,7 @@ type Product = {
   variants: { id: number; name: string; price: number, quantity: string; }[];
 };
 
-type CartItem = {
-  storeId: number;
-  id: number;
-  name: string;
-  brand?: string;
-  price: number;
-  category: string;
-  image: string;
-  variant: { id: number; name: string; price: number, quantity: number };
-};
+
 
 interface CatalogProps {
   selectedStore: Store | null;
@@ -61,7 +53,7 @@ interface CatalogProps {
   selectedCategory: string;
   selectedBrands: Set<string>;
   showBrandDropdown: boolean;
-  cart: CartItem[];
+  cart: CartItems;
   onSetCatalogSearchQuery: (query: string) => void;
   onSetSelectedCategory: (category: string) => void;
   onSetSelectedBrands: (brands: Set<string>) => void;
@@ -208,10 +200,15 @@ export default function Catalogs({
                   const variants = item?.variants || [];
                   return variants.map((variant, variantIndex) => {
                     console.log("Variant:", variant);
-                    const cartItem = cart.find(
+                    console.log("cart:", cart);
+                    const storeCart = cart[selectedStore?.id] || [{}];
+                    console.log("storeCart:", storeCart);
+                    
+                    const cartItem = storeCart.find(
                       (c) => 
                         c.id === item.id &&
-                        c.variant.id === variant.id && c.storeId === selectedStore.id
+                        c.variant.id === variant.id
+                      
                     );
                     console.log("Cart Item:", cartItem);
                     const quantity = cartItem ? cartItem.variant.quantity : 0;
@@ -249,7 +246,7 @@ export default function Catalogs({
                           {quantity > 0 ? (
                             <>
                               <button
-                                onClick={() => onRemoveFromCart(item.id, va)}
+                                onClick={() => onRemoveFromCart(item.id, variant.id, selectedStore?.id)}
                                 className="w-7 h-7 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
                               >
                                 <Minus className="w-3 h-3 text-white" />
@@ -258,7 +255,7 @@ export default function Catalogs({
                                 {quantity}
                               </span>
                               <button
-                                onClick={() => onAddToCart(item, variantIndex)}
+                                onClick={() => onAddToCart(item, variantIndex, selectedStore?.id)}
                                 className="w-7 h-7 bg-green-500/30 hover:bg-green-500/50 rounded-full flex items-center justify-center"
                               >
                                 <Plus className="w-3 h-3 text-white" />
