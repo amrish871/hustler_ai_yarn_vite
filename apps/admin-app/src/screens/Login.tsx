@@ -303,7 +303,7 @@ function Login() {
 
   return (
     <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h2>🎤 Voice AI Assistant</h2>
+      <h2>Order Near Buy</h2>
       <button onClick={startListening} disabled={isListening}>
         {isListening ? "Listening..." : "Speak"}
       </button>

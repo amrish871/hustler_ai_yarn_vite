@@ -18,7 +18,7 @@ export function HeroCarousel({
   return (
     <div className="bg-white/10 rounded-3xl p-8 text-center">
       <h2 className="text-2xl font-bold text-white mb-2">
-        Voice AI Assistant
+        Order Near Buy
       </h2>
 
       <button

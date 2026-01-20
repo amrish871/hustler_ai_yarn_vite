@@ -2,19 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Store,
   MapPin,
-  ArrowLeft,
-  ShoppingCart,
-  MessageSquare,
-  Grid,
-  Plus,
-  Minus,
+  
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import CheckoutPage from "../components/CheckoutPage";
 import HeroCarousel from "../components/HeroCarousel";
 import ChatPanel from "../components/ChatPanel";
 import AddressModal from "../components/AddressModal";
-import { Catalog } from "../components/Catalog";
 import CheckoutPaymentModal from "../components/CheckoutPaymentModal";
 
 import StoreSearch from "../components/StoreSearch";
@@ -32,6 +26,7 @@ import Catalogs from "../components/Catalogs";
 import MetaLoadingSpinner from "../components/MetaLoadingSpinner";
 import { CartItems, CartItem } from "../screens/Home/Home.types";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePlaceOrder } from "../../hooks/useOrdersQuery";
 type Message = {
   text?: string;
   image?: string | null;
@@ -77,6 +72,8 @@ export default function HomeScreen() {
 
   const { data: stores, isLoading: storesLoading } =
     useFetchStoresByCategory(!categoriesLoading ? categories[carouselIndex]?.id : 0);
+
+  // const { mutate: sendOtp } = useLogin();
 
   
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
@@ -1447,7 +1444,7 @@ export default function HomeScreen() {
         c.id === itemId && c.variant.id === variantId
           ? {
               ...c,
-              variant: { ...c.variant, quantity: c.variant.quantity + 1 },
+              variant: { ...c.variant, quantity: c.variant.quantity - 1 },
             }
           : c
       );
@@ -1484,52 +1481,37 @@ export default function HomeScreen() {
       .reduce((sum, item) => sum + item.variant.quantity, 0);
   }    
 
-  const handleCheckout = (storeId: number) => {
-    if (selectedPaymentMethod === "cod") {
-      setOrderPlaced(true);
-      setTimeout(() => {
-        setOrderPlaced(false);
-        // Remove only items from the checked-out store
-        setCart((prevCart) =>
-          prevCart.filter((item) => item.storeId !== storeId)
-        );
-        setShowCheckout(false);
-        // If no more items in cart, reset the UI
-        const remainingItems = cart.filter((item) => item.storeId !== storeId);
-        if (remainingItems.length === 0) {
+  const handleCheckout = (storeIds: Set<number>) => {
+    setOrderPlaced(true);
+    setTimeout(() => {
+      setOrderPlaced(false);
+      // Remove only items from the checked-out stores
+      setCart((prevCart) => {
+        const updatedCart = { ...prevCart };
+        storeIds.forEach((storeId) => {
+          delete updatedCart[storeId];
+        });
+        return updatedCart;
+      });
+      setShowCheckout(false);
+      
+      // If no more items in cart, reset the UI
+      setCart((prevCart) => {
+        const remainingStores = Object.keys(prevCart);
+        if (remainingStores.length === 0) {
           setShowCatalog(false);
           setSelectedStore(null);
           setCurrentTab("chat");
           setShowConversation(false);
         }
-      }, 2000);
-    } else {
-      // For Card/UPI, directly place order
-      setOrderPlaced(true);
-      setTimeout(() => {
-        setOrderPlaced(false);
-        // Remove only items from the checked-out store
-        setCart((prevCart) =>
-          prevCart.filter((item) => item.storeId !== storeId)
-        );
-        setShowCheckout(false);
-        // If no more items in cart, reset the UI
-        const remainingItems = cart.filter((item) => item.storeId !== storeId);
-        if (remainingItems.length === 0) {
-          setShowCatalog(false);
-          setSelectedStore(null);
-          setCurrentTab("chat");
-          setShowConversation(false);
-        }
-      }, 2000);
-    }
+        return prevCart;
+      });
+    }, 2000);
   };
 
   const saveOrder = () => {
     if (selectedStore) {
-      const orderItems = cart.filter(
-        (item) => item.storeId === selectedStore.id
-      );
+      const orderItems = cart[selectedStore.id] || [];
       const newOrder = {
         id: Math.floor(Math.random() * 1000000),
         date: new Date().toLocaleDateString(),
@@ -1645,7 +1627,7 @@ export default function HomeScreen() {
           {/* Start Header with delivery address */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">
-              Voice AI Assistant
+              Order Near Buy
             </h1>
             <p className="text-blue-200">Speak or type to interact</p>
             <button

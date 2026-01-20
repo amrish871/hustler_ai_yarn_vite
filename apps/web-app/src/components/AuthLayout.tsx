@@ -9,8 +9,8 @@ interface AuthLayoutProps {
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ 
   children, 
-  title = 'Voice AI Assistant',
-  subtitle = 'Speak or type to interact' 
+  title = 'Order Near Buy',
+  subtitle = '' //'Speak or type to interact' 
 }) => {
 
   const authToken = localStorage.getItem('authToken')

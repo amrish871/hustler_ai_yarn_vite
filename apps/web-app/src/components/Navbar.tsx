@@ -55,7 +55,7 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
               onClick={() => navigate('/home')}
               className="text-2xl font-bold text-white hover:text-blue-200 transition-colors"
             >
-              🎙️ Voice AI
+              Order Near Buy
             </button>
           </div>
 

@@ -11,9 +11,10 @@ import {
   X,
   Store,
   Package,
+  ChevronDown,
 } from "lucide-react";
 
-import { CartItems } from "../screens/Home/Home.types";
+import { CartItem, CartItems } from "../screens/Home/Home.types";
 
 interface CheckoutPageProps {
   cartItems: CartItems;
@@ -27,7 +28,7 @@ interface CheckoutPageProps {
     popular: string[];
   }>;
   onBack: () => void;
-  onCheckout: (storeId: number) => void;
+  onCheckout: (storeIds: Set<number>) => void;
   getTotalPrice: (storeId?: number) => string;
   removeFromCart: (itemId: number, variantId: number, storeId: number) => void;
   addToCart2: (itemId: number, variantId: number, storeId?: number) => void;
@@ -56,56 +57,104 @@ export default function CheckoutPage({
   fulfillmentType,
   onFulfillmentTypeChange,
 }: CheckoutPageProps) {
-  const [wizardStep, setWizardStep] = useState<"store-select" | "checkout">(
-    "store-select"
-  );
   const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
-  const [selectedStoreForCheckout, setSelectedStoreForCheckout] = useState<
-    number | null
-  >(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
-  // Group cart items by store
-  // const cartByStore = cartItems.reduce((acc, item) => {
-  //   const store = stores.find((s) => s.id === item.storeId);
-  //   if (!store) return acc;
-  //   if (!acc[store.id]) {
-  //     acc[store.id] = { store, items: [] };
-  //   }
-  //   acc[store.id].items.push(item);
-  //   return acc;
-  // }, {} as Record<number, { store: any; items: any[] }>);
+  // Initialize all items as selected on first render
+  React.useEffect(() => {
+    if (selectedItems.size === 0) {
+      const allItemIds = new Set<string>();
+      Object.entries(cartItems).forEach(([storeId, items]) => {
+        (items as any[]).forEach((item) => {
+          allItemIds.add(`${storeId}-${item.id}-${item.variant.id}`);
+        });
+      });
+      setSelectedItems(allItemIds);
+    }
+  }, []);
 
-  // const storeEntries = cartItems;
-  // console.log("storeEntries", storeEntries);
-  const handleStoreSelect = (storeId: number) => {
-    setSelectedStoreForCheckout(storeId);
-    setWizardStep("checkout");
+  const toggleItemSelection = (itemKey: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemKey)) {
+      newSelected.delete(itemKey);
+    } else {
+      newSelected.add(itemKey);
+    }
+    setSelectedItems(newSelected);
   };
 
-  const handleBackToStoreSelect = () => {
-    setWizardStep("store-select");
-    setSelectedStoreForCheckout(null);
+  const calculateSelectedItemsQuantity = (): number => {
+    let totalQuantity = 0;
+    Object.entries(cartItems).forEach(([storeId, items]) => {
+      (items as any[]).forEach((item) => {
+        if (selectedItems.has(`${storeId}-${item.id}-${item.variant.id}`)) {
+          totalQuantity += item.variant.quantity;
+        }
+      });
+    });
+    return totalQuantity;
   };
 
-  const handleStoreCheckout = (storeId: number) => {
-    setSelectedStoreForCheckout(storeId);
+  const calculateStoreTotal = (storeId: number): string => {
+    const itemsForStore = (cartItems[storeId] as any[]) || [];
+    const total = itemsForStore
+      .filter((item) =>
+        selectedItems.has(`${storeId}-${item.id}-${item.variant.id}`)
+      )
+      .reduce((sum: number, item) => sum + item.variant.price * item.variant.quantity, 0)
+      .toFixed(2);
+    return total;
+  };
+
+  const calculateGrandTotal = (): string => {
+    let total = 0;
+    Object.entries(cartItems).forEach(([storeId, items]) => {
+      total += parseFloat(calculateStoreTotal(parseInt(storeId)));
+    });
+    total += fulfillmentType === "pickup" ? 0 : 2.99;
+    return total.toFixed(2);
+  };
+
+  const handleCheckout = () => {
+    if (selectedItems.size === 0) {
+      alert("Please select at least one item");
+      return;
+    }
     setShowOrderConfirmation(true);
-    onCheckout(storeId);
+    
+    // Get stores from selected items
+    const storesInCheckout = new Set<number>();
+    selectedItems.forEach((itemKey) => {
+      const storeId = itemKey.split('-')[0];
+      storesInCheckout.add(parseInt(storeId));
+    });
+    
+    // Call checkout for the first selected store
+    // const firstStoreId = Array.from(storesInCheckout)[0];
+    if (storesInCheckout.size > 0) {
+      onCheckout(storesInCheckout);
+    }
   };
 
+  // Group selected items by store
+  const selectedItemsByStore: Record<number, any[]> = {};
+  Object.entries(cartItems).forEach(([storeId, items]) => {
+    const storeIdNum = parseInt(storeId);
+    const filteredItems = (items as any[]).filter((item) =>
+      selectedItems.has(`${storeId}-${item.id}-${item.variant.id}`)
+    );
+    if (filteredItems.length > 0) {
+      selectedItemsByStore[storeIdNum] = filteredItems;
+    }
+  });
+  // from-purple-900 via-blue-900 to-indigo-900 rounded-2xl max-w-4xl shadow-2xl border border-white/20 max-h-[90vh] flex flex-col
   // Order Confirmation Modal
   if (showOrderConfirmation) {
-    const storeEntries = cartItems[selectedStoreForCheckout || 0] || [];
-    const storeTotal = (storeEntries as any[])
-      .reduce(
-        (sum: number, item) => sum + item.variant.price * item.variant.quantity,
-        0
-      )
-      .toFixed(2);
+    const grandTotal = calculateGrandTotal();
+    const selectedItemCount = calculateSelectedItemsQuantity();
 
     return (
-      <div className="w-full flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center">
         <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 text-center">
           <div className="flex justify-center mb-6">
             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center animate-bounce">
@@ -120,13 +169,13 @@ export default function CheckoutPage({
 
           <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/20 space-y-3">
             <div className="flex justify-between text-white/80">
+              <span>Items:</span>
+              <span className="font-bold text-white">{selectedItemCount}</span>
+            </div>
+            <div className="flex justify-between text-white/80">
               <span>Order Total:</span>
               <span className="font-bold text-green-300">
-                $
-                {(
-                  parseFloat(storeTotal) +
-                  (fulfillmentType === "pickup" ? 0 : 2.99)
-                ).toFixed(2)}
+                ${grandTotal}
               </span>
             </div>
             <div className="flex justify-between text-white/80">
@@ -164,13 +213,15 @@ export default function CheckoutPage({
     );
   }
 
+  
+
   // Empty cart state
   if (Object.keys(cartItems).length === 0) {
     return (
       <div className="w-full flex flex-col items-center justify-center min-h-96">
         <div className="text-center">
           <div className="text-6xl mb-4">🛒</div>
-          <h2 className="text-3xl font-bold text-white mb-2">Cart is Empty</h2>
+          <h2 className="text-3xl font-bold text-white mb-2">Your Cart is Empty</h2>
           <p className="text-white/70 mb-6">
             Add items to your cart to get started
           </p>
@@ -185,117 +236,21 @@ export default function CheckoutPage({
     );
   }
 
-  // Store Selection Step
-  if (wizardStep === "store-select") {
-    return (
-      <div className="w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/10 sticky top-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 z-10">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onBack}
-              className="p-2 hover:bg-white/10 rounded-lg transition-all"
-            >
-              <ArrowLeft className="w-5 h-5 text-white" />
-            </button>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Store className="w-5 h-5" />
-              Select Store
-            </h2>
-          </div>
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-lg transition-all text-white/70 hover:text-white"
-            title="Close"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Store List */}
-        <div className="space-y-3 mb-4 max-h-96 overflow-y-auto pr-2">
-          {Object.entries(cartItems).map(([storeId, items]) => {
-            const storeIdNum = parseInt(storeId);
-            const storeData = stores.find((s) => s.id === storeIdNum);
-            if (!storeData || !items || items.length === 0) return null;
-            
-            const storeTotal = (items as any[])
-              .reduce(
-                (sum: number, item) => sum + item.variant.price * item.variant.quantity,
-                0
-              )
-              .toFixed(2);
-            const itemCount = (items as any[]).reduce(
-              (sum: number, item) => sum + item.variant.quantity,
-              0
-            );
-
-            return (
-              <button
-                key={storeIdNum}
-                onClick={() => handleStoreSelect(storeIdNum)}
-                className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-400 transition-all text-left"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-white font-semibold">{storeData.name}</h3>
-                      <span className="flex items-center gap-1 text-yellow-400 text-xs">
-                        ⭐ {storeData.rating}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-white/70 text-xs mb-2">
-                      <span className="flex items-center gap-1">
-                        <Package className="w-3 h-3" />
-                        {itemCount} items
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {storeData.distance} away
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-green-300 font-bold">
-                      ${storeTotal}
-                    </div>
-                    <div className="text-white/70 text-xs">Total</div>
-                  </div>
-                </div>
-                <div className="text-blue-300 text-xs flex items-center justify-between">
-                  <span>{storeData.category}</span>
-                  <span className="text-blue-400">→</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Back button */}
-        <button
-          onClick={onBack}
-          className="w-full py-2 px-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm font-semibold"
-        >
-          Back to Cart
-        </button>
-      </div>
-    );
-  }
-
+  // Single Page Checkout
   return (
     <div className="w-full">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/10 sticky top-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 z-10">
         <div className="flex items-center gap-2">
           <button
-            onClick={handleBackToStoreSelect}
+            onClick={onBack}
             className="p-2 hover:bg-white/10 rounded-lg transition-all"
           >
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <ShoppingCart className="w-5 h-5" />
-            Order Summary
+            Checkout
           </h2>
         </div>
         <button
@@ -308,7 +263,7 @@ export default function CheckoutPage({
       </div>
 
       {/* Delivery Info */}
-      <div className="bg-white/5 rounded-lg p-3 mb-4 border border-white/10">
+      <div className="bg-white/5 rounded-2xl p-4 mb-4 border border-white/10">
         <div className="flex items-start justify-between mb-3">
           <div>
             <h3 className="text-white font-semibold mb-1 flex items-center gap-2 text-sm">
@@ -324,20 +279,140 @@ export default function CheckoutPage({
             Edit
           </button>
         </div>
+      </div>
 
-        {/* Fulfillment Type */}
-        <div className="flex gap-3 pt-3 border-t border-white/10 text-sm">
+      {/* Items Count and Price Badge */}
+      <div className="bg-green-500/20 rounded-xl p-3 mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ShoppingCart className="w-5 h-5 text-green-300" />
+          <span className="text-white font-semibold">
+            {calculateSelectedItemsQuantity()} items
+          </span>
+        </div>
+        <span className="text-white font-bold text-lg">
+          ${calculateGrandTotal()}
+        </span>
+      </div>
+
+      {/* Store Items Section */}
+      <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto mb-4 space-y-2">
+        {Object.entries(cartItems).map(([storeId, items]) => {
+          const storeIdNum = parseInt(storeId);
+          // const storeData = stores.find((s) => s.id === storeIdNum);
+          // if (!storeData || !items || items.length === 0) return null;
+
+          const storeItemsArray = items as CartItem[];
+
+          return storeItemsArray.map((item) => {
+            const itemKey = `${storeId}-${item.id}-${item.variant.id}`;
+            const isSelected = selectedItems.has(itemKey);
+
+            return (
+              <div
+                key={itemKey}
+                className={`rounded-xl p-3 flex items-center gap-3 transition-all ${
+                  isSelected ? "bg-white/10" : "bg-white/5"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleItemSelection(itemKey)}
+                  className="w-4 h-4 cursor-pointer flex-shrink-0"
+                />
+                <div className="text-3xl">{item.image}</div>
+                <div className="flex-1">
+                  <h4 className="text-white font-semibold text-sm">
+                    {item.name}
+                  </h4>
+                  <p className="text-blue-300 text-xs mb-1">{item.storeName}</p>
+                  <p className="text-green-300 font-bold text-sm">
+                    ${item.variant.price} x {item.variant.quantity}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      removeFromCart(item.id, item.variant.id, storeIdNum)
+                    }
+                    className="w-8 h-8 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
+                  >
+                    <Minus className="w-4 h-4 text-white" />
+                  </button>
+                  <span className="text-white font-semibold w-6 text-center">
+                    {item.variant.quantity}
+                  </span>
+                  <button
+                    onClick={() =>
+                      addToCart2(item.id, item.variant.id, storeIdNum)
+                    }
+                    className="w-8 h-8 bg-green-500/30 hover:bg-green-500/50 rounded-full flex items-center justify-center"
+                  >
+                    <Plus className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              </div>
+            );
+          });
+        })}
+      </div>
+
+      {/* Delivery Charges */}
+      <div className="bg-white/5 rounded-xl p-3 mb-3 flex items-center justify-between">
+        <span className="text-white/70 text-sm">Delivery Charges</span>
+        <span className="text-white font-semibold">
+          {fulfillmentType === "pickup" ? "FREE" : "$2.99"}
+        </span>
+      </div>
+
+      {/* Payment Method & Checkout */}
+      <div className="w-full px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/30 rounded-lg text-white font-semibold transition-all flex flex-col gap-2 sticky bottom-0 z-20">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex flex-col items-start flex-1" title="Payment Method">
+            <span className="text-sm">Payment Method</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-white/70 capitalize">
+                {selectedPaymentMethod === "card" && "💳 Credit Card"}
+                {selectedPaymentMethod === "upi" && "📱 UPI"}
+                {selectedPaymentMethod === "cod" && "🚚 Cash on Delivery"}
+              </span>
+              <button
+                onClick={onEditPayment}
+                title="Change Payment Method"
+                className="p-1 bg-white/10 hover:bg-white/20 rounded-full transition-all flex items-center justify-center"
+              >
+                <ChevronDown className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 ml-auto">
+            <span className="text-lg font-bold text-green-300 whitespace-nowrap">
+              ${calculateGrandTotal()}
+            </span>
+            <button
+              onClick={handleCheckout}
+              disabled={selectedItems.size === 0}
+              className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-bold transition-all flex items-center gap-2 whitespace-nowrap"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              Place Order
+            </button>
+          </div>
+        </div>
+        {/* Fulfillment type selection */}
+        <div className="flex gap-4 mt-2">
           <label className="flex items-center gap-1 cursor-pointer">
             <input
               type="radio"
               name="fulfillmentType"
               value="delivery"
               checked={fulfillmentType === "delivery"}
-              onChange={(e) => onFulfillmentTypeChange("delivery")}
-              className="w-3 h-3"
+              onChange={(e) => {
+                e.stopPropagation();
+                onFulfillmentTypeChange("delivery");
+              }}
             />
-            <Truck className="w-3 h-3 text-white/70" />
-            <span className="text-white/80 text-xs">Delivery</span>
+            <span className="text-xs">Delivery</span>
           </label>
           <label className="flex items-center gap-1 cursor-pointer">
             <input
@@ -345,230 +420,21 @@ export default function CheckoutPage({
               name="fulfillmentType"
               value="pickup"
               checked={fulfillmentType === "pickup"}
-              onChange={(e) => onFulfillmentTypeChange("pickup")}
-              className="w-3 h-3"
+              onChange={(e) => {
+                e.stopPropagation();
+                onFulfillmentTypeChange("pickup");
+              }}
             />
-            <Clock className="w-3 h-3 text-white/70" />
-            <span className="text-white/80 text-xs">Pickup</span>
+            <span className="text-xs">Store Pickup</span>
           </label>
         </div>
-      </div>
-
-      {/* Store Items Section */}
-      <div className="space-y-3 mb-4 max-h-96 overflow-y-auto pr-2">
-        {cartItems[selectedStoreForCheckout || 0] &&
-          (cartItems[selectedStoreForCheckout || 0] as any[]).map((item, index) => {
-            const storeItemsArray = (cartItems[selectedStoreForCheckout || 0] as any[]) || [];
-            const storeTotal = storeItemsArray
-              .reduce(
-                (sum: number, i) => sum + i.variant.price * i.variant.quantity,
-                0
-              )
-              .toFixed(2);
-            const storeData = stores.find((s) => s.id === selectedStoreForCheckout);
-            
-            // Only show store header for first item
-            if (index > 0) {
-              return (
-                <div key={`${selectedStoreForCheckout}-${item.id}`} className="bg-white/5 rounded p-2 flex items-center gap-2 hover:bg-white/10 transition-all text-xs">
-                  <div className="text-lg flex-shrink-0">{item.image}</div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-white font-semibold text-xs">
-                      {item.name}
-                    </h4>
-                    {item.brand && (
-                      <p className="text-white/60 text-xs">{item.brand}</p>
-                    )}
-                    <p className="text-green-300 font-semibold text-xs">
-                      ${item.variant.price}
-                    </p>
-                  </div>
-
-                  {/* Quantity Controls */}
-                  <div className="flex items-center gap-1 bg-white/10 rounded p-0.5 flex-shrink-0">
-                    <button
-                      onClick={() =>
-                        removeFromCart(item.id, item.variant.id, selectedStoreForCheckout || 0)
-                      }
-                      className="w-5 h-5 bg-red-500/30 hover:bg-red-500/50 rounded flex items-center justify-center transition-all"
-                    >
-                      <Minus className="w-2.5 h-2.5 text-white" />
-                    </button>
-                    <span className="w-4 text-center text-white font-semibold text-xs">
-                      {item.variant.quantity}
-                    </span>
-                    <button
-                      onClick={() =>
-                        addToCart2(item.id, item.variant.id, selectedStoreForCheckout || 0)
-                      }
-                      className="w-5 h-5 bg-green-500/30 hover:bg-green-500/50 rounded flex items-center justify-center transition-all"
-                    >
-                      <Plus className="w-2.5 h-2.5 text-white" />
-                    </button>
-                  </div>
-
-                  {/* Item Total */}
-                  <div className="text-right">
-                    <p className="text-white/80 font-semibold text-sm">
-                      $
-                      {(item.variant.price * item.variant.quantity).toFixed(
-                        2
-                      )}
-                    </p>
-                  </div>
-                </div>
-              );
-            }
-            
-            return (
-              <div
-                key={`${selectedStoreForCheckout}-${item.id}`}
-                className="bg-white/5 rounded-lg p-3 border border-white/10"
-              >
-                {storeData && (
-                  <>
-                    {/* Store Header */}
-                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
-                      <div className="text-2xl">{storeData.image}</div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-bold text-sm">
-                          {storeData.name}
-                        </h3>
-                        <p className="text-white/60 text-xs">
-                          {storeData.category} • {storeData.distance}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-green-300 font-bold text-sm">
-                          ${storeTotal}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Items */}
-                    <div className="space-y-2">
-                      <div
-                        key={`${selectedStoreForCheckout}-${item.id}`}
-                        className="bg-white/5 rounded p-2 flex items-center gap-2 hover:bg-white/10 transition-all text-xs"
-                      >
-                        <div className="text-lg flex-shrink-0">{item.image}</div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-xs">
-                            {item.name}
-                          </h4>
-                          {item.brand && (
-                            <p className="text-white/60 text-xs">{item.brand}</p>
-                          )}
-                          <p className="text-green-300 font-semibold text-xs">
-                            ${item.variant.price}
-                          </p>
-                        </div>
-
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-1 bg-white/10 rounded p-0.5 flex-shrink-0">
-                          <button
-                            onClick={() =>
-                              removeFromCart(item.id, item.variant.id, selectedStoreForCheckout || 0)
-                            }
-                            className="w-5 h-5 bg-red-500/30 hover:bg-red-500/50 rounded flex items-center justify-center transition-all"
-                          >
-                            <Minus className="w-2.5 h-2.5 text-white" />
-                          </button>
-                          <span className="w-4 text-center text-white font-semibold text-xs">
-                            {item.variant.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              addToCart2(item.id, item.variant.id, selectedStoreForCheckout || 0)
-                            }
-                            className="w-5 h-5 bg-green-500/30 hover:bg-green-500/50 rounded flex items-center justify-center transition-all"
-                          >
-                            <Plus className="w-2.5 h-2.5 text-white" />
-                          </button>
-                        </div>
-
-                        {/* Item Total */}
-                        <div className="text-right">
-                          <p className="text-white/80 font-semibold text-sm">
-                            $
-                            {(item.variant.price * item.variant.quantity).toFixed(
-                              2
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Store Checkout Button */}
-                    <div className="mt-2 pt-2 border-t border-white/10">
-                      <div className="flex justify-between items-center mb-2 text-xs">
-                        <span className="text-white/70">Total:</span>
-                        <span className="text-green-300 font-bold">
-                          ${storeTotal}
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-      </div>
-
-      {/* Payment Method & Checkout */}
-      <div className="bg-white/5 rounded-lg p-3 mb-4 border border-white/10 sticky bottom-0 z-20">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-col items-start">
-            <h3 className="text-white font-bold mb-2 text-xs">Payment</h3>
-            <button
-              onClick={onEditPayment}
-              className="py-1 px-2 bg-white/10 hover:bg-white/20 text-white rounded text-xs border border-white/10 transition-all flex items-center gap-1 min-w-[110px]"
-              style={{ minWidth: "110px", maxWidth: "150px" }}
-            >
-              <span className="font-medium truncate">
-                {selectedPaymentMethod === "card" && "💳 Card"}
-                {selectedPaymentMethod === "upi" && "📱 UPI"}
-                {selectedPaymentMethod === "cod" && "🚚 COD"}
-              </span>
-              <ShoppingCart className="w-3 h-3 text-blue-300 ml-1" />
-              <span className="text-white/60 text-xs">▼</span>
-            </button>
+        {/* Min order info */}
+        {fulfillmentType === "delivery" && (
+          <div className="text-xs text-yellow-300 mt-2">
+            Min order $20 to avoid delivery charges
           </div>
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {cartItems[selectedStoreForCheckout || 0] && (
-              <div className="text-right">
-                <div className="text-white/70 text-xs mb-1">Total</div>
-                <div className="text-green-300 font-bold text-sm mb-2">
-                  $
-                  {(
-                    parseFloat(
-                      ((cartItems[selectedStoreForCheckout || 0] as any[]) || [])
-                        .reduce(
-                          (sum: number, item) =>
-                            sum + item.variant.price * item.variant.quantity,
-                          0
-                        )
-                        .toFixed(2)
-                    ) +
-                    (fulfillmentType === "pickup" ? 0 : 2.99)
-                  ).toFixed(2)}
-                </div>
-                <button
-                  onClick={() => {
-                    if (selectedStoreForCheckout) handleStoreCheckout(selectedStoreForCheckout);
-                  }}
-                  className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded text-white font-bold transition-all flex items-center justify-center gap-1 text-xs whitespace-nowrap"
-                >
-                  <ShoppingCart className="w-3 h-3" />
-                  Checkout
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* Note: Each store section has its own checkout button */}
     </div>
   );
 }

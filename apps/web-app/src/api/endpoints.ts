@@ -31,3 +31,6 @@ export const API_STORES_BY_CATEGORY = (categoryId: number) => `/api/v1/stores/ca
 
 // store skus by store id
 export const API_STORE_SKUS_BY_STORE_ID = (storeId: number | string) => `/api/v1/store-skus/store/${storeId}/`
+
+// place order
+export const API_PLACE_ORDER = `/api/v1/order/orders/comprehensive/`

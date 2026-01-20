@@ -36,7 +36,7 @@ const ProtectedLayout = ({ children, language, onLanguageChange }: { children: R
         language={language} 
         onLanguageChange={onLanguageChange}
         cartCount={cartCount}
-        onCartClick={onCartClick || undefined}
+        onCartClick={onCartClick}
       />
       {children}
     </>
