@@ -163,6 +163,15 @@ export const createApiService = (api: AxiosInstance) => ({
       throw error;
     }
   },
+
+  patch: async <T>(url: string, data = {}, config = {}) => {
+    try {
+      const response = await api.patch<T>(url, data, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 });
 
 /**

@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Store,
-  MapPin,
-  
-} from "lucide-react";
+import { Store, MapPin } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import CheckoutPage from "../components/CheckoutPage";
 import HeroCarousel from "../components/HeroCarousel";
 import ChatPanel from "../components/ChatPanel";
 import AddressModal from "../components/AddressModal";
 import CheckoutPaymentModal from "../components/CheckoutPaymentModal";
+import Hero from "../components/Hero";
+import SubHero from "../components/SubHero";
 
 import StoreSearch from "../components/StoreSearch";
 import OrderConfirmation from "../components/OrderConfirmation";
@@ -24,9 +22,12 @@ import Header from "../components/Header";
 import Cart from "../components/Cart";
 import Catalogs from "../components/Catalogs";
 import MetaLoadingSpinner from "../components/MetaLoadingSpinner";
+import Footer from "../components/Footer";
 import { CartItems, CartItem } from "../screens/Home/Home.types";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePlaceOrder } from "../../hooks/useOrdersQuery";
+import { useFetchMyAddresses } from "../../hooks/useAddressQuery";
+import { useAuth } from "@myorg/auth";
 type Message = {
   text?: string;
   image?: string | null;
@@ -50,7 +51,13 @@ type Product = {
   quantity?: string;
   category: string;
   image: string;
-  variants: { id: number; name: string; price: number, quantity: string }[];
+  variants: {
+    sku_id: number;
+    id: number;
+    name: string;
+    price: number;
+    quantity: string;
+  }[];
 };
 type CartProduct = {
   id: number;
@@ -59,33 +66,72 @@ type CartProduct = {
   price: number;
   category: string;
   image: string;
-  variants?: { id: number; name: string; price: number, quantity: number }[];
+  variants?: { id: number; name: string; price: number; quantity: number }[];
 };
 
-export default function HomeScreen() {
+export interface CCartItem {
+  quantity: number;
+  sku_id: number;
+  product_name: string;
+  brand: string;
+  variant_name: string;
+  unit_price: number;
+  total_price: number;
+  image_url: string | null;
+}
 
+export interface CCart {
+  store_id: number;
+  store_name: string;
+  order_items: CCartItem[];
+}
+
+export type CartList = CCart[];
+
+export default function HomeScreen({
+  onAddressChange,
+}: {
+  onAddressChange?: (address: string) => void;
+}) {
+  const { isAuthenticated } = useAuth();
+
+  const { data: addresses, isLoading: addressesLoading } =
+    useFetchMyAddresses();
+
+  const { mutate: checkoutCart } = usePlaceOrder();
+
+  // Save addresses to localStorage
+  useEffect(() => {
+    localStorage.setItem("addresses", JSON.stringify(addresses));
+  }, [addresses]);
+
+  console.log(addresses);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
   const { data: categories = [], isLoading: categoriesLoading } =
     useFetchCategories();
-   
 
-  const { data: stores, isLoading: storesLoading } =
-    useFetchStoresByCategory(!categoriesLoading ? categories[carouselIndex]?.id : 0);
+  const { data: stores = [], isLoading: storesLoading } =
+    useFetchStoresByCategory(
+      !categoriesLoading ? categories[carouselIndex]?.id : 0,
+    );
 
-  // const { mutate: sendOtp } = useLogin();
-
-  
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
   const [deliveryAddress, setDeliveryAddress] = useState<string>(
-    "123 Main Street, Apt 4B, New York, NY 10001"
+    "123 Main Street, Apt 4B, New York, NY 10001",
   );
+
+  // Wrapper function to update address in both local state and parent component
+  const handleAddressChange = (newAddress: string) => {
+    setDeliveryAddress(newAddress);
+    onAddressChange?.(newAddress);
+  };
 
   const [storeProductSuggestions, setStoreProductSuggestions] = useState<
     { store: Store; product: Product }[]
   >([]);
   const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">(
-    "delivery"
+    "delivery",
   );
   const [showConversation, setShowConversation] = useState<boolean>(false);
   const [showCheckout, setShowCheckout] = useState<boolean>(false);
@@ -97,14 +143,14 @@ export default function HomeScreen() {
   const [storeSearchQuery, setStoreSearchQuery] = useState<string>("");
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [selectedStoreCatalog, setSelectedStoreCatalog] = useState<Product[]>(
-    []
+    [],
   );
   const [showCatalog, setShowCatalog] = useState<boolean>(false);
-  const [cart, setCart] = useState<CartItems>({});
+  const [cart, setCart] = useState<CartList>([]);
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(
-    new Set(["All"])
+    new Set(["All"]),
   );
   const [showBrandDropdown, setShowBrandDropdown] = useState<boolean>(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
@@ -113,9 +159,10 @@ export default function HomeScreen() {
     useState<boolean>(false);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [orderPlaced, setOrderPlaced] = useState<boolean>(false);
+  const [checkoutItems, setCheckoutItems] = useState<CartItems>({});
 
   const [currentTab, setCurrentTab] = useState<"chat" | "catalog" | "cart">(
-    "chat"
+    "chat",
   );
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
@@ -133,36 +180,36 @@ export default function HomeScreen() {
     Record<string, number>
   >({});
   const [recentlyVisitedStores, setRecentlyVisitedStores] = useState<Store[]>(
-    []
+    [],
   );
   const [nearbyStores, setNearbyStores] = useState<Store[]>([]);
 
   // Cart context
   const { setCartCount, setOnCartClick } = useCart();
 
-  const addresses = [
-    {
-      id: 1,
-      label: "Home",
-      address: "123 Main Street, Apt 4B, New York, NY 10001",
-    },
-    {
-      id: 2,
-      label: "Office",
-      address: "456 Business Ave, Suite 200, New York, NY 10002",
-    },
-    {
-      id: 3,
-      label: "Friend's Place",
-      address: "789 Oak Road, Brooklyn, NY 10003",
-    },
-  ];
+  // const addresses = [
+  //   {
+  //     id: 1,
+  //     label: "Home",
+  //     address: "123 Main Street, Apt 4B, New York, NY 10001",
+  //   },
+  //   {
+  //     id: 2,
+  //     label: "Office",
+  //     address: "456 Business Ave, Suite 200, New York, NY 10002",
+  //   },
+  //   {
+  //     id: 3,
+  //     label: "Friend's Place",
+  //     address: "789 Oak Road, Brooklyn, NY 10003",
+  //   },
+  // ];
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-
-  const {data: storeSkus, isLoading: storeSkusLoading} = useFetchStoreSkusByStoreId(selectedStore ? selectedStore.id : 0);
+  const { data: storeSkus, isLoading: storeSkusLoading } =
+    useFetchStoreSkusByStoreId(selectedStore ? selectedStore.id : 0);
 
   const carouselSlides = categoriesLoading ? [] : categories;
   // [
@@ -204,10 +251,17 @@ export default function HomeScreen() {
 
   // Sync cart state with CartContext for navbar
   useEffect(() => {
-    const totalCartCount = Object.values(cart).flatMap(items => items)
-    .reduce((sum, item) => sum + (item.variant?.quantity || 0), 0);
+    const totalCartCount = cart.reduce(
+      (sum, storeCart) =>
+        sum +
+        (storeCart?.order_items?.reduce(
+          (itemSum, item) => itemSum + item.quantity,
+          0,
+        ) || 0),
+      0,
+    );
     setCartCount(totalCartCount);
-  
+
     setOnCartClick(() => () => {
       setShowCheckout(true);
     });
@@ -215,13 +269,13 @@ export default function HomeScreen() {
 
   const queryClient = useQueryClient();
   useEffect(() => {
-  if (selectedStore) {
-    // Invalidate the previous store's data (optional - for cleanup)
-    queryClient.invalidateQueries({
-      queryKey: ["fetchStoreSkusByStoreId", selectedStore.id],
-    });
-  }
-}, [selectedStore]);
+    if (selectedStore) {
+      // Invalidate the previous store's data (optional - for cleanup)
+      queryClient.invalidateQueries({
+        queryKey: ["fetchStoreSkusByStoreId", selectedStore.id],
+      });
+    }
+  }, [selectedStore]);
 
   // Populate nearby stores based on current category stores
   useEffect(() => {
@@ -258,7 +312,7 @@ export default function HomeScreen() {
 
   // Filter products for shopping assistant (includes store info)
   const filterAssistantProducts = (
-    answers: Record<string, string>
+    answers: Record<string, string>,
   ): Array<{ store: Store; product: Product }> => {
     const results: Array<{ store: Store; product: Product }> = [];
 
@@ -272,7 +326,7 @@ export default function HomeScreen() {
           (p) =>
             p.name.toLowerCase().includes(searchTerm) ||
             p.category.toLowerCase().includes(searchTerm) ||
-            p.brand?.toLowerCase().includes(searchTerm)
+            p.brand?.toLowerCase().includes(searchTerm),
         );
       }
 
@@ -289,14 +343,14 @@ export default function HomeScreen() {
         filtered = filtered.filter(
           (p) =>
             p.brand?.toLowerCase().includes(answers.brand.toLowerCase()) ||
-            false
+            false,
         );
       }
 
       // Filter by color
       if (answers.color && answers.color.toLowerCase() !== "skip") {
         filtered = filtered.filter((p) =>
-          p.name.toLowerCase().includes(answers.color.toLowerCase())
+          p.name.toLowerCase().includes(answers.color.toLowerCase()),
         );
       }
 
@@ -380,7 +434,7 @@ export default function HomeScreen() {
   const handleSelectRecommendation = (storeId: number, product: Product) => {
     // Find the store
     const selectedStoreFromRecommendation = stores.find(
-      (s) => s.id === storeId
+      (s) => s.id === storeId,
     );
     if (!selectedStoreFromRecommendation) return;
 
@@ -395,14 +449,14 @@ export default function HomeScreen() {
     setTimeout(() => {
       setCart((prevCart) => {
         const existingItem = prevCart.find(
-          (c) => c.id === product.id && c.storeId === storeId
+          (c) => c.id === product.id && c.storeId === storeId,
         );
 
         if (existingItem) {
           return prevCart.map((c) =>
             c.id === product.id && c.storeId === storeId
               ? { ...c, quantity: c.quantity + quantity }
-              : c
+              : c,
           );
         } else {
           return [
@@ -450,8 +504,6 @@ export default function HomeScreen() {
       }, 100);
     }
   };
-
-  
 
   // Store catalogs mapping
   // const storeSkus: { [storeId: number]: Product[] } = {
@@ -515,7 +567,7 @@ export default function HomeScreen() {
   //       image: "🍌",
   //       variants: [
   //         { id: 11, name: "2L", price: 6.99, quantity: "1 bunch" },
-  //       ] 
+  //       ]
   //     },
   //     {
   //       id: 6,
@@ -815,7 +867,7 @@ export default function HomeScreen() {
             const matchedStore = stores.find(
               (store) =>
                 userMessage.includes(store.name.toLowerCase()) ||
-                userMessage.includes(store.name.split(" ")[0].toLowerCase())
+                userMessage.includes(store.name.split(" ")[0].toLowerCase()),
             );
 
             if (matchedStore) {
@@ -849,21 +901,21 @@ export default function HomeScreen() {
           ) {
             if (selectedStore) {
               const currentStore = stores.find(
-                (s) => s.id === selectedStore.id
+                (s) => s.id === selectedStore.id,
               );
               if (currentStore) {
                 currentStore.catalog.forEach((product) => {
                   const productNameLower = product.name.toLowerCase();
                   const productWords = productNameLower.split(" ");
                   const isMatched = productWords.some((word) =>
-                    userMessage.includes(word)
+                    userMessage.includes(word),
                   );
 
                   if (isMatched) {
                     const existingItemIndex = updatedCart.findIndex(
                       (item) =>
                         item.id === product.id &&
-                        item.storeId === selectedStore.id
+                        item.storeId === selectedStore.id,
                     );
 
                     if (existingItemIndex > -1) {
@@ -883,7 +935,7 @@ export default function HomeScreen() {
                 if (addedItems.length > 0) {
                   setCart(updatedCart);
                   aiResponse = `Great! I've added ${addedItems.join(
-                    ", "
+                    ", ",
                   )} to your cart. 🛒`;
                 } else {
                   aiResponse = `I couldn't find those items in ${selectedStore.name}. Try saying the product name like "milk", "bread", "eggs", etc.`;
@@ -1072,7 +1124,7 @@ export default function HomeScreen() {
         const matchedStore = stores.find(
           (store) =>
             userMessage.includes(store.name.toLowerCase()) ||
-            userMessage.includes(store.name.split(" ")[0].toLowerCase())
+            userMessage.includes(store.name.split(" ")[0].toLowerCase()),
         );
 
         if (matchedStore) {
@@ -1202,7 +1254,7 @@ export default function HomeScreen() {
             // Check if any part of product name is in the user message
             const productWords = productNameLower.split(" ");
             const isMatched = productWords.some((word) =>
-              userMessage.includes(word)
+              userMessage.includes(word),
             );
 
             if (isMatched) {
@@ -1212,7 +1264,7 @@ export default function HomeScreen() {
               // Look for numbers like "2 milk", "milk 2", "2x milk", etc.
               let quantity = 1;
               const numberMatch = userMessage.match(
-                /\b(\d+)\s*(x|of)?\s*(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\b|\b(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\s+(\d+)\b/i
+                /\b(\d+)\s*(x|of)?\s*(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\b|\b(milk|pizza|burger|bread|eggs|cheese|juice|coffee|pasta|bread|spinach|tomatoes|carrots|blueberries|quinoa|honey|chips|cola|orange|chocolate|ice cream|garlic|margherita|pepperoni|spaghetti)\s+(\d+)\b/i,
               );
 
               if (numberMatch) {
@@ -1225,7 +1277,7 @@ export default function HomeScreen() {
               // Add item to cart
               const existingItemIndex = updatedCart.findIndex(
                 (item) =>
-                  item.id === product.id && item.storeId === selectedStore.id
+                  item.id === product.id && item.storeId === selectedStore.id,
               );
 
               if (existingItemIndex > -1) {
@@ -1239,7 +1291,7 @@ export default function HomeScreen() {
               }
 
               addedItems.push(
-                `${quantity}x ${product.name} (${product.image})`
+                `${quantity}x ${product.name} (${product.image})`,
               );
             }
           });
@@ -1248,7 +1300,7 @@ export default function HomeScreen() {
           if (addedItems.length > 0) {
             setCart(updatedCart);
             aiResponse = `Great! I've added ${addedItems.join(
-              ", "
+              ", ",
             )} to your cart. 🛒`;
           } else {
             // Check if user is asking for help or just making conversation
@@ -1317,8 +1369,8 @@ export default function HomeScreen() {
         stores.filter(
           (store) =>
             store.name.toLowerCase().includes(query.toLowerCase()) ||
-            store.category.toLowerCase().includes(query.toLowerCase())
-        )
+            store.category.toLowerCase().includes(query.toLowerCase()),
+        ),
       );
     }
   };
@@ -1328,9 +1380,9 @@ export default function HomeScreen() {
     const fullStore = stores.find((s) => s.id === store.id) || store;
 
     // Load the catalog for the selected store
-    
+
     setSelectedStore(fullStore);
-    
+
     setShowStoreSearch(false);
     setSelectedCategory("All");
     setSelectedBrands(new Set(["All"]));
@@ -1363,110 +1415,173 @@ export default function HomeScreen() {
   // Line 1373-1401 should be:
   const addToCart = (item: Product, variantIndex: number) => {
     if (!selectedStore) return;
-    const storeCart = cart[selectedStore.id] || [];
-    const existing = storeCart.find(
-      (c) => c.id === item.id && c.variant.id === item.variants[variantIndex].id
+    const storeCart = cart.find((c) => c.store_id === selectedStore.id);
+    const sku_id = item.variants[variantIndex].sku_id;
+
+    const existing: CCartItem | undefined = storeCart?.order_items.find(
+      (order_item: CCartItem) => order_item.sku_id === sku_id,
     );
 
-    const updatedStoreCart = existing
-      ? storeCart.map((c) =>
-          c.id === item.id && c.variant.id === item.variants[variantIndex].id
-            ? {
-                ...c,
-                variant: { ...c.variant, quantity: c.variant.quantity + 1 },
-              }
-            : c
-        )
-      : [
-          ...storeCart,
-          {
-            storeId: selectedStore.id,
-            storeName: selectedStore.name,
-            id: item.id,
-            name: item.name,
-            brand: item.brand,
-            price: item.price,
-            category: item.category,
-            image: item.image,
-            variant: {
-              id: item.variants[variantIndex].id,
-              name: item.variants[variantIndex].name,
-              price: item.variants[variantIndex].price,
-              quantity: 1,
-            },
-          },
-        ];
+    let updatedSkus: CCartItem[] = [];
 
-    setCart({
-      ...cart,
-      [selectedStore.id]: updatedStoreCart
-    });
+    if (storeCart && existing) {
+      updatedSkus = storeCart.order_items.map((order_item: CCartItem) =>
+        order_item.sku_id === sku_id
+          ? { ...order_item, quantity: order_item.quantity + 1 }
+          : order_item,
+      );
+    } else {
+      const newSku: CCartItem = {
+        quantity: 1,
+        sku_id: item.variants[variantIndex].sku_id,
+        product_name: item.name,
+        brand: item.brand || "",
+        variant_name: item.variants[variantIndex].name,
+        unit_price: item.variants[variantIndex].price,
+        total_price: item.variants[variantIndex].price,
+        image_url: null,
+      };
+      updatedSkus = [...(storeCart?.order_items ?? []), newSku];
+    }
+
+    if (storeCart) {
+      setCart(
+        cart.map((c) =>
+          c.store_id === selectedStore.id
+            ? { ...c, order_items: updatedSkus }
+            : c,
+        ),
+      );
+    } else {
+      setCart([
+        ...cart,
+        {
+          store_id: selectedStore.id,
+          store_name: selectedStore.name,
+          order_items: updatedSkus,
+        },
+      ]);
+    }
   };
+  // const addToCart = (item: Product, variantIndex: number) => {
+  //   if (!selectedStore) return;
+  //   const storeCart = cart[selectedStore.id] || [];
+  //   const existing = storeCart.find(
+  //     (c) => c.id === item.id && c.variant.id === item.variants[variantIndex].id
+  //   );
 
-  const addToCart2 = (itemId: number, variantId: number, storeId?: number) => {
+  //   const updatedStoreCart = existing
+  //     ? storeCart.map((c) =>
+  //         c.id === item.id && c.variant.id === item.variants[variantIndex].id
+  //           ? {
+  //               ...c,
+  //               variant: { ...c.variant, quantity: c.variant.quantity + 1 },
+  //             }
+  //           : c
+  //       )
+  //     : [
+  //         ...storeCart,
+  //         {
+  //           storeId: selectedStore.id,
+  //           storeName: selectedStore.name,
+  //           id: item.id,
+  //           name: item.name,
+  //           brand: item.brand,
+  //           price: item.price,
+  //           category: item.category,
+  //           image: item.image,
+  //           variant: {
+  //             id: item.variants[variantIndex].id,
+  //             name: item.variants[variantIndex].name,
+  //             price: item.variants[variantIndex].price,
+  //             quantity: 1,
+  //           },
+  //         },
+  //       ];
+
+  //   setCart({
+  //     ...cart,
+  //     [selectedStore.id]: updatedStoreCart
+  //   });
+  // };
+
+  const addToCart2 = (sku_id: number, storeId?: number) => {
     const targetStoreId = storeId || selectedStore?.id;
     if (!targetStoreId) return;
-    const storeCart = cart[targetStoreId] || [];
-    const existing = storeCart.find(
-      (c) => c.id === itemId && c.variant.id === variantId
-    );
-    if (existing && existing.variant.quantity > 1) {
-      const updatedStoreCart = storeCart.map((c) =>
-        c.id === itemId && c.variant.id === variantId
+    const storeCart = cart.find((c) => c.store_id === targetStoreId);
+    const existing = storeCart?.order_items.find((c) => c.sku_id === sku_id);
+    if (storeCart && existing) {
+      const updatedOrderItems = storeCart.order_items.map((c) =>
+        c.sku_id === sku_id
           ? {
               ...c,
-              variant: { ...c.variant, quantity: c.variant.quantity + 1 },
+              quantity: c.quantity + 1,
+              total_price: (c.quantity + 1) * c.unit_price,
             }
-          : c
+          : c,
       );
 
-      setCart({
-        ...cart,
-        [targetStoreId]: updatedStoreCart
-      });
+      setCart(
+        cart.map((c) =>
+          c.store_id === targetStoreId
+            ? { ...c, order_items: updatedOrderItems }
+            : c,
+        ),
+      );
     }
   };
 
-  const removeFromCart = (itemId: number, variantId: number, storeId?: number) => {
+  const removeFromCart = (sku_id: number, storeId?: number) => {
     const targetStoreId = storeId || selectedStore?.id;
     if (!targetStoreId) return;
-    const storeCart = cart[targetStoreId] || [];
-    const existing = storeCart.find(
-      (c) => 
-      c.id === itemId&&
-      c.variant.id === variantId
-      );
-    // const existing = cart.find(
-    //   (c) => c.id === itemId && c.storeId === targetStoreId
-    // );
-    if (existing && existing.variant.quantity > 1) {
-      const updatedStoreCart = storeCart.map((c) =>
-        c.id === itemId && c.variant.id === variantId
+    const storeCart = cart.find((c) => c.store_id === targetStoreId);
+    const existing = storeCart?.order_items.find((c) => c.sku_id === sku_id);
+
+    if (storeCart && existing && existing.quantity > 1) {
+      const updatedOrderItems = storeCart.order_items.map((c) =>
+        c.sku_id === sku_id
           ? {
               ...c,
-              variant: { ...c.variant, quantity: c.variant.quantity - 1 },
+              quantity: c.quantity - 1,
+              total_price: (c.quantity - 1) * c.unit_price,
             }
-          : c
+          : c,
       );
 
-      setCart({
-        ...cart,
-        [targetStoreId]: updatedStoreCart
-      });
+      setCart(
+        cart.map((c) =>
+          c.store_id === targetStoreId
+            ? { ...c, order_items: updatedOrderItems }
+            : c,
+        ),
+      );
     } else {
-      setCart({
-        ...cart,
-        [targetStoreId]: storeCart.filter((c) => !(c.id === itemId && c.variant.id === variantId))
-      });
+      setCart(
+        cart.map((c) =>
+          c.store_id === targetStoreId
+            ? {
+                ...c,
+                order_items: c.order_items.filter(
+                  (item) => item.sku_id !== sku_id,
+                ),
+              }
+            : c,
+        ),
+      );
     }
   };
 
   const getTotalPrice = (storeId?: number) => {
     const targetStoreId = storeId || selectedStore?.id;
-    if (!targetStoreId || !cart[targetStoreId]) return "0.00";
-    
-    const subtotal = cart[targetStoreId]
-      .reduce((sum, item) => sum + item.variant.price * item.variant.quantity, 0);
+    if (!targetStoreId) return "0.00";
+    const cart_items = cart.find(
+      (c) => c.store_id === targetStoreId,
+    )?.order_items;
+    if (!cart_items) return "0.00";
+    const subtotal = cart_items.reduce(
+      (sum, item) => sum + item.unit_price * item.quantity,
+      0,
+    );
 
     // Add delivery charges if delivery is selected and order is less than $20
     const deliveryCharge =
@@ -1474,39 +1589,104 @@ export default function HomeScreen() {
     return (subtotal + deliveryCharge).toFixed(2);
   };
   const getCartCount = () => {
-    if(!selectedStore) return 0;
-    const storeCart = cart[selectedStore?.id]
-    if(!storeCart) return 0;
-    return storeCart
-      .reduce((sum, item) => sum + item.variant.quantity, 0);
-  }    
+    if (!selectedStore) return 0;
+    const cart_items = cart.find(
+      (c) => c.store_id === selectedStore.id,
+    )?.order_items;
+    if (!cart_items) return 0;
+    return cart_items.reduce((sum, item) => sum + item.quantity, 0);
+  };
 
-  const handleCheckout = (storeIds: Set<number>) => {
+  const handleCheckout = (skuSet: Set<string>) => {
     setOrderPlaced(true);
+    // Save items from checked-out stores before removing from cart
+    const checkedOutItemsMap: any = {};
+    // const updatedCart = cart;
+    // const result = cart
+    // .map(store => ({
+    //   store_id: store.store_id,
+    //   order_items: store.order_items.filter(item =>
+    //     skuSet.has(item.sku_id+"")
+    //   )
+    // }))
+    // .filter(store => store.order_items.length > 0);
+    const result = prepareCheckoutPayload(skuSet);
+    (async () => {
+      checkoutCart(
+        {
+          checkout_items: result.matched_items,
+          address_id: 1,
+        },
+        
+        {
+          onSuccess: (data) => {
+            console.log("Order placed successfully!", data);
+            // localStorage.setItem('authToken', data.token)
+            // localStorage.setItem('user', JSON.stringify(data.user))
+            setOrderPlaced(false);
+
+            setCart(result.unmatched_items);
+            setShowCheckout(false);
+          },
+          onError: (error) => {
+            // Handle e)rror, e.g., show an alert
+            // console.error('Error verifying OTP:', error)
+            // setError(t(language, 'invalid_otp'))
+          },
+        },
+      );
+    })();
     setTimeout(() => {
-      setOrderPlaced(false);
-      // Remove only items from the checked-out stores
-      setCart((prevCart) => {
-        const updatedCart = { ...prevCart };
-        storeIds.forEach((storeId) => {
-          delete updatedCart[storeId];
-        });
-        return updatedCart;
-      });
-      setShowCheckout(false);
-      
       // If no more items in cart, reset the UI
-      setCart((prevCart) => {
-        const remainingStores = Object.keys(prevCart);
-        if (remainingStores.length === 0) {
-          setShowCatalog(false);
-          setSelectedStore(null);
-          setCurrentTab("chat");
-          setShowConversation(false);
-        }
-        return prevCart;
-      });
+      // setCart((prevCart) => {
+      //   const remainingStores = Object.keys(prevCart);
+      //   if (remainingStores.length === 0) {
+      //     setShowCatalog(false);
+      //     setSelectedStore(null);
+      //     setCurrentTab("chat");
+      //     setShowConversation(false);
+      //   }
+      //   return prevCart;
+      // });
     }, 2000);
+  };
+
+  const prepareCheckoutPayload = (skuSet: Set<string>) => {
+    // Prepare payload for checkout API
+    const result = cart.reduce(
+      (acc, store) => {
+        const matched: CCartItem[] = [];
+        const unmatched: CCartItem[] = [];
+
+        for (const item of store.order_items) {
+          if (skuSet.has(item.sku_id + "")) {
+            matched.push(item);
+          } else {
+            unmatched.push(item);
+          }
+        }
+
+        if (matched.length > 0) {
+          acc.matched_items.push({
+            store_id: store.store_id,
+            store_name: store.store_name,
+            order_items: matched,
+          });
+        }
+
+        if (unmatched.length > 0) {
+          acc.unmatched_items.push({
+            store_id: store.store_id,
+            store_name: store.store_name,
+            order_items: unmatched,
+          });
+        }
+
+        return acc;
+      },
+      { matched_items: [] as CartList, unmatched_items: [] as CartList },
+    );
+    return result;
   };
 
   const saveOrder = () => {
@@ -1531,7 +1711,6 @@ export default function HomeScreen() {
 
   // carouselRef, carouselIndex, carouselSlides, getCartCount(),
   // isListening, toggleListening, setShowConversation, setShowMediaOptions
-  
 
   useEffect(() => {
     if (storesLoading) return;
@@ -1549,6 +1728,19 @@ export default function HomeScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      {/* Hero Section */}
+      <Hero onGetStarted={() => setShowConversation(true)} />
+
+      {/* Sub Hero Section */}
+      <SubHero
+        onCategorySelect={(category) => {
+          setCarouselIndex(
+            categories.findIndex((c) => c.name === category) || 0,
+          );
+          setShowConversation(true);
+        }}
+      />
+
       {/* Start show Order Confirmation when order is placed */}
       {orderPlaced && (
         <OrderConfirmation
@@ -1571,7 +1763,7 @@ export default function HomeScreen() {
         <AddressModal
           addresses={addresses}
           deliveryAddress={deliveryAddress}
-          setDeliveryAddress={setDeliveryAddress}
+          setDeliveryAddress={handleAddressChange}
           setShowAddressModal={setShowAddressModal}
         />
       )}
@@ -1617,15 +1809,17 @@ export default function HomeScreen() {
       {/* End show Checkout Modal */}
 
       {/* Meta-style Loading Spinner */}
-      <MetaLoadingSpinner 
-        visible={categoriesLoading || storesLoading} 
-        message={categoriesLoading ? 'Loading categories...' : 'Loading stores...'}
+      <MetaLoadingSpinner
+        visible={categoriesLoading || storesLoading}
+        message={
+          categoriesLoading ? "Loading categories..." : "Loading stores..."
+        }
       />
 
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
         <div className="w-full max-w-4xl">
           {/* Start Header with delivery address */}
-          <div className="text-center mb-8">
+          {/* <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">
               Order Near Buy
             </h1>
@@ -1637,7 +1831,7 @@ export default function HomeScreen() {
               <MapPin className="w-5 h-5 text-green-400" />
               <p className="text-white/90 text-sm">{deliveryAddress}</p>
             </button>
-          </div>
+          </div> */}
           {/* End Header with delivery address */}
 
           {/* Main Card */}
@@ -1673,12 +1867,14 @@ export default function HomeScreen() {
                 />
               )}
               {/* End show store search when the user click on browse button */}
-              {selectedStore && (<Header
-                selectedStore={selectedStore}
-                onSetSelectedStore={setSelectedStore}
-                onSetShowConversation={setShowConversation}
-                onSetShowCatalog={setShowCatalog}
-              />)}
+              {selectedStore && (
+                <Header
+                  selectedStore={selectedStore}
+                  onSetSelectedStore={setSelectedStore}
+                  onSetShowConversation={setShowConversation}
+                  onSetShowCatalog={setShowCatalog}
+                />
+              )}
               {selectedStore && (
                 <HeaderTabs
                   selectedStore={selectedStore}
@@ -1702,8 +1898,14 @@ export default function HomeScreen() {
                   onSetSelectedCategory={setSelectedCategory}
                   onSetSelectedBrands={setSelectedBrands}
                   onSetShowBrandDropdown={setShowBrandDropdown}
-                  onAddToCart={(item: Product, variantIndex: number) => addToCart(item, variantIndex)}
-                  onRemoveFromCart={(itemId: number, variantId: number, storeId?: number) => removeFromCart(itemId, variantId, storeId)}
+                  onAddToCart={(item: Product, variantIndex: number) =>
+                    addToCart(item, variantIndex)
+                  }
+                  onRemoveFromCart={(
+                    itemId: number,
+                    variantId: number,
+                    storeId?: number,
+                  ) => removeFromCart(itemId, variantId, storeId)}
                 />
               )}
 
@@ -1722,7 +1924,7 @@ export default function HomeScreen() {
                   onRemoveFromCart={removeFromCart}
                   onGetCartCount={getCartCount}
                   onGetTotalPrice={getTotalPrice}
-                  onHandleCheckout={handleCheckout} 
+                  onHandleCheckout={handleCheckout}
                 />
               )}
               {showConversation && (
@@ -1770,7 +1972,9 @@ export default function HomeScreen() {
                   onImageUpload={handleImageUpload}
                   onToggleListening={toggleListening}
                   onSelectSuggestion={selectSuggestion}
-                  onAddToCart={(item: Product, variantIndex: number) => addToCart(item, variantIndex)}
+                  onAddToCart={(item: Product, variantIndex: number) =>
+                    addToCart(item, variantIndex)
+                  }
                   onRemoveFromCart={removeFromCart}
                   onHandleSelectRecommendation={handleSelectRecommendation}
                   onGetCartCount={getCartCount}
@@ -1828,8 +2032,9 @@ export default function HomeScreen() {
             )}
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
-
-

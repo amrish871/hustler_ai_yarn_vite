@@ -13,6 +13,7 @@ import {
   Grid,
 } from "lucide-react";
 import { CartItems, CartItem } from "../screens/Home/Home.types";
+import { CartList } from "../screens/HomeScreen";
 
 
 type Message = {
@@ -40,7 +41,7 @@ type Product = {
   
   category: string;
   image: string;
-  variants: { id: number; name: string; price: number, quantity: string; }[];
+  variants: { sku_id: number; id: number; name: string; price: number, quantity: string; }[];
 };
 
 
@@ -53,7 +54,7 @@ interface CatalogProps {
   selectedCategory: string;
   selectedBrands: Set<string>;
   showBrandDropdown: boolean;
-  cart: CartItems;
+  cart: CartList;
   onSetCatalogSearchQuery: (query: string) => void;
   onSetSelectedCategory: (category: string) => void;
   onSetSelectedBrands: (brands: Set<string>) => void;
@@ -201,21 +202,20 @@ export default function Catalogs({
                   return variants.map((variant, variantIndex) => {
                     console.log("Variant:", variant);
                     console.log("cart:", cart);
-                    const storeCart = cart[selectedStore?.id] || [{}];
-                    console.log("storeCart:", storeCart);
+                    const store_cart_items = cart.find((c) => c.store_id === selectedStore?.id)?.order_items || [];
+                    console.log("storeCart:", store_cart_items);
                     
-                    const cartItem = storeCart.find(
+                    const cart_item = store_cart_items.find(
                       (c) => 
-                        c.id === item.id &&
-                        c.variant.id === variant.id
-                      
+                        c.sku_id === variant.sku_id
                     );
-                    console.log("Cart Item:", cartItem);
-                    const quantity = cartItem ? cartItem.variant.quantity : 0;
+
+                    console.log("Cart Item:", cart_item);
+                    const quantity = cart_item ? cart_item.quantity : 0;
                     console.log("Quantity for item", item.name, ":", quantity);
                     return (
                       <div
-                        key={variant.id}
+                        key={variant.sku_id}
                         className="bg-white/10 rounded-xl p-3 flex items-center gap-3"
                       >
                         <div className="text-4xl flex-shrink-0">
@@ -246,7 +246,7 @@ export default function Catalogs({
                           {quantity > 0 ? (
                             <>
                               <button
-                                onClick={() => onRemoveFromCart(item.id, variant.id, selectedStore?.id)}
+                                onClick={() => onRemoveFromCart(variant.sku_id, selectedStore?.id)}
                                 className="w-7 h-7 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
                               >
                                 <Minus className="w-3 h-3 text-white" />

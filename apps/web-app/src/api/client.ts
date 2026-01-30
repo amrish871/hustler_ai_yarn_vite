@@ -23,7 +23,7 @@ import { createApiInstance, createApiService } from '@myorg/shared-api/apiServic
 //'http://localhost:8000'
 const api = createApiInstance(
   {
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'https://dev-hustle-service-g9g6emembfdyhwd4.canadacentral-01.azurewebsites.net',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   },
   {
     excludedPaths: ['/login', '/auth/login', '/auth/refresh'],

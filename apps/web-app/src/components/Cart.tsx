@@ -7,6 +7,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+import { CartList } from "../screens/HomeScreen";
+
 
 type Store = {
   id: number;
@@ -33,7 +35,7 @@ type Product = {
 interface CartProps {
   selectedStore: Store | null;
   currentTab: "chat" | "catalog" | "cart";
-  cart: CartItems;
+  cart: CartList;
   stores: Store[];
   selectedPaymentMethod: string;
   fulfillmentType: 'delivery' | 'pickup';
@@ -42,8 +44,8 @@ interface CartProps {
   onGetTotalPrice: (storeId?: number) => string;
   onHandleCheckout: (storeId: number) => void;
   onGetCartCount: () => number;
-  onRemoveFromCart: (itemId: number, variantId: number, storeId?: number) => void;
-  onAddToCart: (itemId: number, variantId: number, storeId?: number) => void;
+  onRemoveFromCart: (sku_id: number, storeId?: number) => void;
+  onAddToCart: (sku_id: number, storeId?: number) => void;
 }
 
 export default function Cart({
@@ -71,35 +73,36 @@ export default function Cart({
           {onGetCartCount() > 0 ? (
             <>
               <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto mb-4 space-y-2">
-                { 
-                  selectedStore && cart[selectedStore.id].map((cartItem) => {
+                {
+                  selectedStore &&
+                  cart.find((c) => c.store_id === selectedStore.id)?.order_items.map((cartItem) => {
                   return (
                     <div
-                      key={`${cartItem.id}`}
+                      key={`${cartItem.sku_id}`}
                       className="bg-white/10 rounded-xl p-3 flex items-center gap-3"
                     >
-                      <div className="text-3xl">{cartItem.image}</div>
+                      <div className="text-3xl">{cartItem.image_url}</div>
                       <div className="flex-1">
                         <h4 className="text-white font-semibold text-sm">
-                          {cartItem.name}
+                          {cartItem.product_name}
                         </h4>
                         <p className="text-blue-300 text-xs mb-1">{selectedStore.name}</p>
                         <p className="text-green-300 font-bold text-sm">
-                          ${cartItem.price} x {cartItem.variant.quantity}
+                          ${cartItem.unit_price} x {cartItem.quantity}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => onRemoveFromCart(cartItem.id, selectedStore.id)}
+                          onClick={() => onRemoveFromCart(cartItem.sku_id, selectedStore.id)}
                           className="w-8 h-8 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
                         >
                           <Minus className="w-4 h-4 text-white" />
                         </button>
                         <span className="text-white font-semibold w-6 text-center">
-                          {cartItem.variant.quantity}
+                          {cartItem.quantity}
                         </span>
                         <button
-                          onClick={() => onAddToCart(cartItem.id, cartItem.variant.id, selectedStore.id)}
+                          onClick={() => onAddToCart(cartItem.sku_id, selectedStore.id)}
                           className="w-8 h-8 bg-green-500/30 hover:bg-green-500/50 rounded-full flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4 text-white" />
@@ -126,8 +129,8 @@ export default function Cart({
                 <span className="text-white/70 text-sm">Delivery Charges</span>
                 <span className="text-white font-semibold">
                   {fulfillmentType === "delivery" &&
-                  selectedStore && cart[selectedStore.id]
-                    .reduce((sum, item) => sum + item.price * item.variant.quantity, 0) < 20
+                  selectedStore && (cart.find((c) => c.store_id === selectedStore.id)?.order_items
+                    .reduce((sum, item) => sum + item.unit_price * item.quantity, 0) ?? 0) < 20
                     ? "$5.00"
                     : "FREE"}
                 </span>

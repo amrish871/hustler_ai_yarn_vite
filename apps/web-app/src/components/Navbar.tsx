@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Menu, X, LogOut, CreditCard, Package, TrendingUp, Bell, Globe, ShoppingCart } from 'lucide-react';
+import { MapPin, Menu, X, LogOut, CreditCard, Package, TrendingUp, Bell, Globe, ShoppingCart, ChevronDown } from 'lucide-react';
 import { Language, t } from '../translations';
 
 interface NavbarProps {
@@ -11,13 +11,17 @@ interface NavbarProps {
   orders?: any[];
   cartCount?: number;
   onCartClick?: (() => void) | null;
+  // deliveryAddress?: string;
+  onAddressClick?: () => void;
 }
 
-export default function Navbar({ onMenuClick, user, language, onLanguageChange, orders = [], cartCount = 0, onCartClick }: NavbarProps) {
+export default function Navbar({ onMenuClick, user, language, onLanguageChange, orders = [], cartCount = 0, onCartClick, onAddressClick }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userInfo, setUserInfo] = useState(user);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const deliveryAddress = localStorage.getItem('deliveryAddress') ? JSON.parse(localStorage.getItem('deliveryAddress') as string) : '';
 
   // Load user from localStorage if not provided
   useEffect(() => {
@@ -28,6 +32,22 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
       }
     }
   }, [userInfo]);
+
+  // Close menu when clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showUserMenu]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -44,10 +64,27 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
     { label: t(language, 'subscriptions'), icon: Bell, action: () => navigate('/subscriptions') },
   ];
 
+
+  const setDeliveryAddress = (address: string) => {
+    localStorage.setItem('deliveryAddress', JSON.stringify(address));
+  }
+
+  useEffect(() => {
+    const addresses = localStorage.getItem('addresses');
+    
+    if (addresses) {
+      const addressObject = JSON.parse(addresses)
+      const defaultAddress = addressObject.find((address: any) =>address.isDefault);
+      console.log('Default Address from Navbar:', JSON.stringify(defaultAddress));
+      const addressString = `${defaultAddress.apartment_number}, ${defaultAddress.locality}, near ${defaultAddress.landmark}, ${defaultAddress.formatted_address}`;
+      setDeliveryAddress(addressString);
+    }
+  }, [deliveryAddress]);
+
   return (
     <>
       <nav className="bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900 shadow-lg border-b border-white/10 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
@@ -59,26 +96,24 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
             </button>
           </div>
 
-          {/* Center: Cart & Profile */}
-          <div className="flex items-center gap-6">
-            {/* Cart Icon */}
-            
-            <button
-              onClick={onCartClick}
-              className="relative w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
-              title="Shopping Cart"
-            >
-              <ShoppingCart className="w-6 h-6 text-white" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {cartCount}
-                </span>
-              )}
-            </button>
-            
+          {/* Center: Delivery Address */}
+          <div className="flex-1 flex justify-center px-4">
+            {deliveryAddress && (
+              <button
+                onClick={onAddressClick}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm max-w-md transition-all cursor-pointer"
+              >
+                <MapPin className="w-4 h-4 text-blue-300 flex-shrink-0" />
+                <span className="truncate">{deliveryAddress}</span>
+                <span className="ml-auto text-blue-300 font-bold">▼</span>
+              </button>
+            )}
+          </div>
 
+          {/* Right: Profile & Cart */}
+          <div className="flex items-center gap-6">
             {/* User Profile Button & Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-3 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all"
@@ -167,7 +202,22 @@ export default function Navbar({ onMenuClick, user, language, onLanguageChange, 
                 </div>
               </div>
             )}
-          </div>
+            </div>
+
+            {/* Cart Icon */}
+            
+            <button
+              onClick={onCartClick}
+              className="relative w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
+              title="Shopping Cart"
+            >
+              <ShoppingCart className="w-6 h-6 text-white" />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {cartCount}
+                </span>
+              )}
+            </button>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden ml-4">

@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowLeft, Edit2, Trash2, Plus } from 'lucide-react';
+import { MapPin, ArrowLeft, Edit2, Trash2, Plus, Home, Briefcase } from 'lucide-react';
 
 import { Language } from '../translations';
+import { useSetDefaultAddress, useDeleteAddress } from '../../hooks/useAddressQuery';
 interface Address {
   id: string;
   label?: string;
-  line1: string;
-  line2?: string;
+  locality: string;
+  apartment_number: string;
+  landmark?: string;
   city?: string;
   state?: string;
   postalCode?: string;
-  country?: string;
   isDefault?: boolean;
 }
 
@@ -21,6 +22,9 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
   const [newAddress, setNewAddress] = useState<Partial<Address>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  const { mutate: setDefaultAddressFun } = useSetDefaultAddress();
+  const { mutate: deleteAddressFun } = useDeleteAddress();
 
   // Load addresses from localStorage on mount
   useEffect(() => {
@@ -36,8 +40,8 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
   }, [addresses]);
 
   const addAddress = (addr: Partial<Address>) => {
-    if (!addr.line1 || !addr.label) {
-      alert('Please fill in address label and street address');
+    if (!addr.locality || !addr.label || !addr.apartment_number) {
+      alert('Please fill in address label, locality, and apartment number');
       return;
     }
     
@@ -48,12 +52,12 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
           ? {
               ...a,
               label: addr.label || a.label,
-              line1: addr.line1 || a.line1,
-              line2: addr.line2,
+              locality: addr.locality || a.locality,
+              apartment_number: addr.apartment_number || a.apartment_number,
+              landmark: addr.landmark,
               city: addr.city,
               state: addr.state,
               postalCode: addr.postalCode,
-              country: addr.country,
             }
           : a
       ));
@@ -62,12 +66,12 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
       // Add new address
       const a: Address = {
         id: `addr-${Date.now()}`,
-        line1: addr.line1 || '',
-        line2: addr.line2,
+        locality: addr.locality || '',
+        apartment_number: addr.apartment_number || '',
+        landmark: addr.landmark,
         city: addr.city,
         state: addr.state,
         postalCode: addr.postalCode,
-        country: addr.country,
         label: addr.label || 'Home',
         isDefault: addresses.length === 0,
       };
@@ -79,10 +83,12 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
   };
 
   const setDefaultAddress = (id: string) => {
+    setDefaultAddressFun({ userAddressId: Number(id) });
     setAddresses(prev => prev.map(a => ({ ...a, isDefault: a.id === id })));
   };
 
   const deleteAddress = (id: string) => {
+    deleteAddressFun({ userAddressId: Number(id) });
     setAddresses(prev => prev.filter(a => a.id !== id));
   };
 
@@ -112,13 +118,13 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
         );
         const data = await res.json();
         const address = data.address || {};
-        const line1 = data.name || `${address.road || ''} ${address.house_number || ''}`;
+        const locality = data.name || `${address.road || ''} ${address.house_number || ''}`;
         const city = address.city || address.town || address.village || '';
         const state = address.state || '';
         const postalCode = address.postcode || '';
         setNewAddress(prev => ({
           ...prev,
-          line1: line1.trim(),
+          locality: locality.trim(),
           city,
           state,
           postalCode,
@@ -143,6 +149,7 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
               </button>
               <h2 className="text-2xl font-bold text-white">{language ? (language === 'hi' ? 'पते प्रबंधित करें' : 'Manage Addresses') : 'Manage Addresses'}</h2>
             </div>
+            {!showForm && (
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all"
@@ -150,9 +157,11 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
               <Plus className="w-5 h-5" />
               {language === 'hi' ? 'जोड़ें' : 'Add Address'}
             </button>
+            )}
           </div>
 
           {/* Addresses List */}
+          {!showForm && (
           <div className="mb-8">
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2 text-lg">
               <MapPin className="w-5 h-5 text-blue-400" />
@@ -181,9 +190,10 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
                     </div>
                     
                     <div className="space-y-2 mb-4">
-                      <div className="text-white/80 text-sm">{addr.line1}</div>
-                      {addr.line2 && (
-                        <div className="text-white/80 text-sm">{addr.line2}</div>
+                      <div className="text-white/80 text-sm font-medium">{addr.apartment_number}</div>
+                      <div className="text-white/80 text-sm">{addr.locality}</div>
+                      {addr.landmark && (
+                        <div className="text-white/80 text-sm">{addr.landmark}</div>
                       )}
                       {(addr.city || addr.state || addr.postalCode) && (
                         <div className="text-white/70 text-sm">
@@ -220,6 +230,7 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
               </div>
             )}
           </div>
+          )}
 
           {/* Add/Edit Address Form */}
           {showForm && (
@@ -228,23 +239,54 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
                 {editingId ? (language === 'hi' ? 'पता संपादित करें' : 'Edit Address') : (language === 'hi' ? 'नया पता जोड़ें' : 'Add New Address')}
               </h3>
               <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-white text-sm font-medium">
+                    {language === 'hi' ? 'पता लेबल' : 'Address Label'}
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="label"
+                        value="Home"
+                        checked={newAddress.label === 'Home'}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, label: e.target.value }))}
+                        className="w-4 h-4 accent-blue-400"
+                      />
+                      <Home className="w-4 h-4 text-white" />
+                      <span className="text-white text-sm">{language === 'hi' ? 'घर' : 'Home'}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="label"
+                        value="Office"
+                        checked={newAddress.label === 'Office'}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, label: e.target.value }))}
+                        className="w-4 h-4 accent-blue-400"
+                      />
+                      <Briefcase className="w-4 h-4 text-white" />
+                      <span className="text-white text-sm">{language === 'hi' ? 'कार्यालय' : 'Office'}</span>
+                    </label>
+                  </div>
+                </div>
                 <input
                   className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder={language === 'hi' ? 'पता लेबल (जैसे, घर, कार्यालय)' : 'Address label (e.g., Home, Office)'}
-                  value={newAddress.label || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, label: e.target.value }))}
+                  placeholder={language === 'hi' ? 'अपार्टमेंट नंबर' : 'Apartment Number'}
+                  value={newAddress.apartment_number || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, apartment_number: e.target.value }))}
                 />
                 <input
                   className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder={language === 'hi' ? 'सड़क का पता' : 'Street address'}
-                  value={newAddress.line1 || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, line1: e.target.value }))}
+                  placeholder={language === 'hi' ? 'इलाका' : 'Locality'}
+                  value={newAddress.locality || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, locality: e.target.value }))}
                 />
                 <input
                   className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder={language === 'hi' ? 'अपार्टमेंट/यूनिट (वैकल्पिक)' : 'Apartment/Unit (Optional)'}
-                  value={newAddress.line2 || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, line2: e.target.value }))}
+                  placeholder={language === 'hi' ? 'लैंडमार्क (वैकल्पिक)' : 'Landmark (Optional)'}
+                  value={newAddress.landmark || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, landmark: e.target.value }))}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <input
@@ -260,20 +302,12 @@ export default function AddressManagement({ language = 'en' }: { language?: Lang
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, state: e.target.value }))}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder={language === 'hi' ? 'पिन कोड' : 'Postal code'}
-                    value={newAddress.postalCode || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, postalCode: e.target.value }))}
-                  />
-                  <input
-                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder={language === 'hi' ? 'देश' : 'Country'}
-                    value={newAddress.country || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, country: e.target.value }))}
-                  />
-                </div>
+                <input
+                  className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder={language === 'hi' ? 'पिन कोड' : 'Postal code'}
+                  value={newAddress.postalCode || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAddress(prev => ({ ...prev, postalCode: e.target.value }))}
+                />
 
                 <div className="flex gap-2 pt-2">
                   <button

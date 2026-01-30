@@ -15,9 +15,10 @@ import {
 } from "lucide-react";
 
 import { CartItem, CartItems } from "../screens/Home/Home.types";
+import { CartList, CCartItem } from "../screens/HomeScreen";
 
 interface CheckoutPageProps {
-  cartItems: CartItems;
+  cartItems: CartList;
   stores: Array<{
     id: number;
     name: string;
@@ -28,9 +29,9 @@ interface CheckoutPageProps {
     popular: string[];
   }>;
   onBack: () => void;
-  onCheckout: (storeIds: Set<number>) => void;
+  onCheckout: (selectedItems: Set<string>) => void;
   getTotalPrice: (storeId?: number) => string;
-  removeFromCart: (itemId: number, variantId: number, storeId: number) => void;
+  removeFromCart: (itemId: number, storeId: number) => void;
   addToCart2: (itemId: number, variantId: number, storeId?: number) => void;
   selectedPaymentMethod: string;
   onPaymentMethodChange: (method: string) => void;
@@ -59,14 +60,14 @@ export default function CheckoutPage({
 }: CheckoutPageProps) {
   const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-
+  
   // Initialize all items as selected on first render
   React.useEffect(() => {
     if (selectedItems.size === 0) {
       const allItemIds = new Set<string>();
-      Object.entries(cartItems).forEach(([storeId, items]) => {
-        (items as any[]).forEach((item) => {
-          allItemIds.add(`${storeId}-${item.id}-${item.variant.id}`);
+      cartItems.map((cart) => {
+        (cart.order_items as CCartItem[]).forEach((item) => {
+          allItemIds.add(`${item.sku_id}`);
         });
       });
       setSelectedItems(allItemIds);
@@ -85,10 +86,10 @@ export default function CheckoutPage({
 
   const calculateSelectedItemsQuantity = (): number => {
     let totalQuantity = 0;
-    Object.entries(cartItems).forEach(([storeId, items]) => {
-      (items as any[]).forEach((item) => {
-        if (selectedItems.has(`${storeId}-${item.id}-${item.variant.id}`)) {
-          totalQuantity += item.variant.quantity;
+    cartItems.map((cart) => {
+      (cart.order_items).map((item) => {
+        if (selectedItems.has(`${item.sku_id}`)) {
+          totalQuantity += item.quantity;
         }
       });
     });
@@ -96,20 +97,21 @@ export default function CheckoutPage({
   };
 
   const calculateStoreTotal = (storeId: number): string => {
-    const itemsForStore = (cartItems[storeId] as any[]) || [];
+    const cart = cartItems.find((c) => c.store_id === storeId);
+    const itemsForStore = (cart?.order_items as CCartItem[]) || [];
     const total = itemsForStore
       .filter((item) =>
-        selectedItems.has(`${storeId}-${item.id}-${item.variant.id}`)
+        selectedItems.has(`${item.sku_id}`)
       )
-      .reduce((sum: number, item) => sum + item.variant.price * item.variant.quantity, 0)
+      .reduce((sum: number, item) => sum + item.unit_price * item.quantity, 0)
       .toFixed(2);
     return total;
   };
 
   const calculateGrandTotal = (): string => {
     let total = 0;
-    Object.entries(cartItems).forEach(([storeId, items]) => {
-      total += parseFloat(calculateStoreTotal(parseInt(storeId)));
+    cartItems.forEach((cart) => {
+      total += parseFloat(calculateStoreTotal(cart.store_id));
     });
     total += fulfillmentType === "pickup" ? 0 : 2.99;
     return total.toFixed(2);
@@ -122,32 +124,27 @@ export default function CheckoutPage({
     }
     setShowOrderConfirmation(true);
     
-    // Get stores from selected items
-    const storesInCheckout = new Set<number>();
-    selectedItems.forEach((itemKey) => {
-      const storeId = itemKey.split('-')[0];
-      storesInCheckout.add(parseInt(storeId));
-    });
+    // Extract dict of stores and their selected items from selected items
+    // selectedItems.forEach((itemKey) => {
+      
+    //   if (!checkoutData[storeId]) {
+    //     checkoutData[storeId] = [];
+    //   }
+      
+    //   checkoutData[storeId].push({
+    //     itemId: itemId
+
+    //   });
+    // });
     
-    // Call checkout for the first selected store
-    // const firstStoreId = Array.from(storesInCheckout)[0];
-    if (storesInCheckout.size > 0) {
-      onCheckout(storesInCheckout);
-    }
+    // Extract just the store IDs for onCheckout callback
+    // const storesInCheckout = new Set(Object.keys(checkoutData).map(Number));
+    
+    // if (Object.keys(checkoutData).length > 0) {
+      onCheckout(selectedItems);
+    // }
   };
 
-  // Group selected items by store
-  const selectedItemsByStore: Record<number, any[]> = {};
-  Object.entries(cartItems).forEach(([storeId, items]) => {
-    const storeIdNum = parseInt(storeId);
-    const filteredItems = (items as any[]).filter((item) =>
-      selectedItems.has(`${storeId}-${item.id}-${item.variant.id}`)
-    );
-    if (filteredItems.length > 0) {
-      selectedItemsByStore[storeIdNum] = filteredItems;
-    }
-  });
-  // from-purple-900 via-blue-900 to-indigo-900 rounded-2xl max-w-4xl shadow-2xl border border-white/20 max-h-[90vh] flex flex-col
   // Order Confirmation Modal
   if (showOrderConfirmation) {
     const grandTotal = calculateGrandTotal();
@@ -296,15 +293,16 @@ export default function CheckoutPage({
 
       {/* Store Items Section */}
       <div className="bg-white/5 rounded-2xl p-4 max-h-96 overflow-y-auto mb-4 space-y-2">
-        {Object.entries(cartItems).map(([storeId, items]) => {
-          const storeIdNum = parseInt(storeId);
+        {cartItems.map((cart) => {
+          // const storeId = cart.store_id;
+          // const storeIdNum = cart.store_id;
           // const storeData = stores.find((s) => s.id === storeIdNum);
-          // if (!storeData || !items || items.length === 0) return null;
+          // if (!storeData || !cart.order_items || cart.order_items.length === 0) return null;
 
-          const storeItemsArray = items as CartItem[];
+          // const storeItemsArray = cart.order_items;
 
-          return storeItemsArray.map((item) => {
-            const itemKey = `${storeId}-${item.id}-${item.variant.id}`;
+          return cart.order_items.map((item) => {
+            const itemKey = `${cart.store_id}-${item.sku_id}`;
             const isSelected = selectedItems.has(itemKey);
 
             return (
@@ -320,31 +318,31 @@ export default function CheckoutPage({
                   onChange={() => toggleItemSelection(itemKey)}
                   className="w-4 h-4 cursor-pointer flex-shrink-0"
                 />
-                <div className="text-3xl">{item.image}</div>
+                <div className="text-3xl">{item.image_url}</div>
                 <div className="flex-1">
                   <h4 className="text-white font-semibold text-sm">
-                    {item.name}
+                    {item.product_name}
                   </h4>
-                  <p className="text-blue-300 text-xs mb-1">{item.storeName}</p>
+                  <p className="text-blue-300 text-xs mb-1">{cart.store_name}</p>
                   <p className="text-green-300 font-bold text-sm">
-                    ${item.variant.price} x {item.variant.quantity}
+                    ${item.unit_price} x {item.quantity}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() =>
-                      removeFromCart(item.id, item.variant.id, storeIdNum)
+                      removeFromCart(item.sku_id, cart.store_id)
                     }
                     className="w-8 h-8 bg-red-500/30 hover:bg-red-500/50 rounded-full flex items-center justify-center"
                   >
                     <Minus className="w-4 h-4 text-white" />
                   </button>
                   <span className="text-white font-semibold w-6 text-center">
-                    {item.variant.quantity}
+                    {item.quantity}
                   </span>
                   <button
                     onClick={() =>
-                      addToCart2(item.id, item.variant.id, storeIdNum)
+                      addToCart2(item.sku_id, cart.store_id)
                     }
                     className="w-8 h-8 bg-green-500/30 hover:bg-green-500/50 rounded-full flex items-center justify-center"
                   >
